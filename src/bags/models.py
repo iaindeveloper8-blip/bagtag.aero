@@ -44,7 +44,15 @@ class Bag(Base):
         cascade="all, delete-orphan",
         order_by="BagImage.uploaded_at",
     )
-    trip_bags: Mapped[list["TripBag"]] = relationship("TripBag", back_populates="bag")  # type: ignore[name-defined]  # noqa: F821
+    trip_bags: Mapped[list["TripBag"]] = relationship(  # type: ignore[name-defined]  # noqa: F821
+        "TripBag", back_populates="bag", passive_deletes=True
+    )
+    updates: Mapped[list["BagUpdate"]] = relationship(
+        "BagUpdate",
+        back_populates="bag",
+        cascade="all, delete-orphan",
+        order_by="BagUpdate.created_at.desc()",
+    )
 
     @property
     def iata_code(self) -> str | None:
@@ -91,3 +99,21 @@ class BagImage(Base):
     )
 
     bag: Mapped["Bag"] = relationship("Bag", back_populates="images")
+
+
+class BagUpdate(Base):
+    __tablename__ = "bag_update"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bag_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("bag.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    finder_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=False)
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+    bag: Mapped["Bag"] = relationship("Bag", back_populates="updates")

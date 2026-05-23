@@ -29,3 +29,10 @@ class BagCreate(BaseModel):
 
 class BagUpdate(BagCreate):
     pass
+
+
+class BagUpdateCreate(BaseModel):
+    finder_name: str = Field(min_length=1, max_length=200)
+    comment: str = Field(min_length=1, max_length=2000)
+    latitude: float | None = None
+    longitude: float | None = None

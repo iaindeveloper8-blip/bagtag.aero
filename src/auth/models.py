@@ -23,3 +23,6 @@ class User(Base):
     packing_templates: Mapped[list["PackingTemplate"]] = relationship(  # type: ignore[name-defined]  # noqa: F821
         "PackingTemplate", back_populates="user"
     )
+    notifications: Mapped[list["Notification"]] = relationship(  # type: ignore[name-defined]  # noqa: F821
+        "Notification", back_populates="user", cascade="all, delete-orphan"
+    )

@@ -13,15 +13,18 @@ from sqlalchemy.orm import selectinload
 # Ensure all models are registered with Base.metadata before create_all
 import src.auth.models  # noqa: F401, E402
 import src.bags.models  # noqa: F401, E402
+import src.notifications.models  # noqa: F401, E402
 import src.packing.models  # noqa: F401, E402
 import src.trips.models  # noqa: F401, E402
 from src.auth import router as auth_router
 from src.auth.dependencies import CurrentUser
+from src.bags import public_router as bags_public_router
 from src.bags import router as bags_router
 from src.bags.models import Bag
 from src.config import settings
 from src.database import Base, SessionFactory, engine, get_db
 from src.exceptions import RedirectToLogin
+from src.notifications import router as notifications_router
 from src.packing import router as packing_router
 from src.trips import router as trips_router
 from src.trips.models import Trip
@@ -57,8 +60,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(auth_router.router, prefix="/auth")
 app.include_router(bags_router.router, prefix="/bags")
+app.include_router(bags_public_router.router, prefix="/b")
 app.include_router(trips_router.router, prefix="/trips")
 app.include_router(packing_router.router, prefix="/packing")
+app.include_router(notifications_router.router, prefix="/notifications")
 
 
 @app.exception_handler(RedirectToLogin)

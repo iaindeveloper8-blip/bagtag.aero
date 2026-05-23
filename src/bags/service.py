@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import aiofiles
@@ -9,7 +10,9 @@ from sqlalchemy.orm import selectinload
 
 from src.bags.exceptions import BagNotFound, ImageNotFound, ImageTooLarge, InvalidImageType
 from src.bags.models import Bag, BagImage
-from src.bags.schemas import BagCreate, BagUpdate
+from src.bags.models import BagUpdate as BagUpdateModel
+from src.bags.schemas import BagCreate, BagUpdateCreate
+from src.bags.schemas import BagUpdate as BagEditSchema
 from src.config import settings
 
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
@@ -46,7 +49,7 @@ async def create_bag(db: AsyncSession, user_id: int, data: BagCreate) -> Bag:
     return bag
 
 
-async def update_bag(db: AsyncSession, bag: Bag, data: BagUpdate) -> Bag:
+async def update_bag(db: AsyncSession, bag: Bag, data: BagEditSchema) -> Bag:
     for field, value in data.model_dump().items():
         setattr(bag, field, value)
     await db.commit()
@@ -137,3 +140,48 @@ async def set_primary_image(db: AsyncSession, bag: Bag, image_id: int) -> None:
     await db.execute(update(BagImage).where(BagImage.bag_id == bag.id).values(is_primary=False))
     image.is_primary = True
     await db.commit()
+
+
+async def get_public_bag(db: AsyncSession, bag_id: int) -> Bag:
+    result = await db.execute(
+        select(Bag)
+        .where(Bag.id == bag_id)
+        .options(selectinload(Bag.images), selectinload(Bag.updates))
+    )
+    bag = result.scalar_one_or_none()
+    if not bag:
+        raise BagNotFound()
+    return bag
+
+
+async def get_relevant_flights(db: AsyncSession, bag_id: int) -> list:
+    from src.trips.models import Flight, Trip, TripBag
+
+    now = datetime.utcnow()
+    past_limit = now - timedelta(hours=24)
+    future_limit = now + timedelta(hours=12)
+
+    result = await db.execute(
+        select(Flight)
+        .join(Trip, Flight.trip_id == Trip.id)
+        .join(TripBag, TripBag.trip_id == Trip.id)
+        .where(
+            TripBag.bag_id == bag_id,
+            Flight.departure_at >= past_limit,
+            Flight.departure_at <= future_limit,
+        )
+        .order_by(Flight.departure_at)
+    )
+    return list(result.scalars().all())
+
+
+async def create_bag_update(
+    db: AsyncSession,
+    bag_id: int,
+    data: BagUpdateCreate,
+) -> BagUpdateModel:
+    bag_update = BagUpdateModel(bag_id=bag_id, **data.model_dump())
+    db.add(bag_update)
+    await db.commit()
+    await db.refresh(bag_update)
+    return bag_update
