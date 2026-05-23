@@ -9,13 +9,9 @@ from src.auth.dependencies import CurrentUser
 from src.bags import service as bag_service
 from src.bags.constants import (
     LABEL_MAP,
+    BagColor,
     BagMaterial,
     BagType,
-    ClosingMechanism,
-    HandleType,
-    LockType,
-    SizeCategory,
-    WheelType,
 )
 from src.bags.dependencies import OwnedBag
 from src.bags.schemas import BagCreate, BagUpdate
@@ -25,13 +21,9 @@ router = APIRouter(tags=["bags"])
 templates = Jinja2Templates(directory="templates")
 
 _ENUM_CONTEXT = {
+    "BagColor": BagColor,
     "BagType": BagType,
     "BagMaterial": BagMaterial,
-    "HandleType": HandleType,
-    "WheelType": WheelType,
-    "SizeCategory": SizeCategory,
-    "ClosingMechanism": ClosingMechanism,
-    "LockType": LockType,
     "LABEL_MAP": LABEL_MAP,
 }
 
@@ -71,17 +63,14 @@ async def create_bag(
     purchase_price: Annotated[str | None, Form()] = None,
     volume_liters: Annotated[str | None, Form()] = None,
     tare_weight_kg: Annotated[str | None, Form()] = None,
+    color: Annotated[str | None, Form()] = None,
     bag_type: Annotated[str | None, Form()] = None,
-    color_primary: Annotated[str | None, Form()] = None,
-    color_secondary: Annotated[str | None, Form()] = None,
     material: Annotated[str | None, Form()] = None,
-    handle_type: Annotated[str | None, Form()] = None,
-    wheel_type: Annotated[str | None, Form()] = None,
-    size_category: Annotated[str | None, Form()] = None,
-    closing_mechanism: Annotated[str | None, Form()] = None,
-    lock_type: Annotated[str | None, Form()] = None,
-    has_straps: Annotated[str | None, Form()] = None,
-    strap_color: Annotated[str | None, Form()] = None,
+    is_cabin_size: Annotated[str | None, Form()] = None,
+    has_combination_lock: Annotated[str | None, Form()] = None,
+    has_retractable_handle: Annotated[str | None, Form()] = None,
+    has_closing_straps: Annotated[str | None, Form()] = None,
+    has_wheels: Annotated[str | None, Form()] = None,
     has_ribbons: Annotated[str | None, Form()] = None,
     ribbon_description: Annotated[str | None, Form()] = None,
     has_name_tag: Annotated[str | None, Form()] = None,
@@ -89,26 +78,6 @@ async def create_bag(
     distinguishing_marks: Annotated[str | None, Form()] = None,
     notes: Annotated[str | None, Form()] = None,
 ):
-    def _parse_float(v: str | None) -> float | None:
-        try:
-            return float(v) if v and v.strip() else None
-        except ValueError:
-            return None
-
-    def _parse_int(v: str | None) -> int | None:
-        try:
-            return int(v) if v and v.strip() else None
-        except ValueError:
-            return None
-
-    from datetime import date as _date
-
-    def _parse_date(v: str | None):
-        try:
-            return _date.fromisoformat(v) if v and v.strip() else None
-        except ValueError:
-            return None
-
     data = BagCreate(
         name=name,
         brand=brand or None,
@@ -117,17 +86,14 @@ async def create_bag(
         purchase_price=_parse_float(purchase_price),
         volume_liters=_parse_float(volume_liters),
         tare_weight_kg=_parse_float(tare_weight_kg),
+        color=color or None,
         bag_type=bag_type or None,
-        color_primary=color_primary or None,
-        color_secondary=color_secondary or None,
         material=material or None,
-        handle_type=handle_type or None,
-        wheel_type=wheel_type or None,
-        size_category=size_category or None,
-        closing_mechanism=closing_mechanism or None,
-        lock_type=lock_type or None,
-        has_straps=has_straps == "on",
-        strap_color=strap_color or None,
+        is_cabin_size=is_cabin_size == "on",
+        has_combination_lock=has_combination_lock == "on",
+        has_retractable_handle=has_retractable_handle == "on",
+        has_closing_straps=has_closing_straps == "on",
+        has_wheels=has_wheels == "on",
         has_ribbons=has_ribbons == "on",
         ribbon_description=ribbon_description or None,
         has_name_tag=has_name_tag == "on",
@@ -171,17 +137,14 @@ async def update_bag(
     purchase_price: Annotated[str | None, Form()] = None,
     volume_liters: Annotated[str | None, Form()] = None,
     tare_weight_kg: Annotated[str | None, Form()] = None,
+    color: Annotated[str | None, Form()] = None,
     bag_type: Annotated[str | None, Form()] = None,
-    color_primary: Annotated[str | None, Form()] = None,
-    color_secondary: Annotated[str | None, Form()] = None,
     material: Annotated[str | None, Form()] = None,
-    handle_type: Annotated[str | None, Form()] = None,
-    wheel_type: Annotated[str | None, Form()] = None,
-    size_category: Annotated[str | None, Form()] = None,
-    closing_mechanism: Annotated[str | None, Form()] = None,
-    lock_type: Annotated[str | None, Form()] = None,
-    has_straps: Annotated[str | None, Form()] = None,
-    strap_color: Annotated[str | None, Form()] = None,
+    is_cabin_size: Annotated[str | None, Form()] = None,
+    has_combination_lock: Annotated[str | None, Form()] = None,
+    has_retractable_handle: Annotated[str | None, Form()] = None,
+    has_closing_straps: Annotated[str | None, Form()] = None,
+    has_wheels: Annotated[str | None, Form()] = None,
     has_ribbons: Annotated[str | None, Form()] = None,
     ribbon_description: Annotated[str | None, Form()] = None,
     has_name_tag: Annotated[str | None, Form()] = None,
@@ -189,26 +152,6 @@ async def update_bag(
     distinguishing_marks: Annotated[str | None, Form()] = None,
     notes: Annotated[str | None, Form()] = None,
 ):
-    def _parse_float(v: str | None) -> float | None:
-        try:
-            return float(v) if v and v.strip() else None
-        except ValueError:
-            return None
-
-    def _parse_int(v: str | None) -> int | None:
-        try:
-            return int(v) if v and v.strip() else None
-        except ValueError:
-            return None
-
-    from datetime import date as _date
-
-    def _parse_date(v: str | None):
-        try:
-            return _date.fromisoformat(v) if v and v.strip() else None
-        except ValueError:
-            return None
-
     data = BagUpdate(
         name=name,
         brand=brand or None,
@@ -217,17 +160,14 @@ async def update_bag(
         purchase_price=_parse_float(purchase_price),
         volume_liters=_parse_float(volume_liters),
         tare_weight_kg=_parse_float(tare_weight_kg),
+        color=color or None,
         bag_type=bag_type or None,
-        color_primary=color_primary or None,
-        color_secondary=color_secondary or None,
         material=material or None,
-        handle_type=handle_type or None,
-        wheel_type=wheel_type or None,
-        size_category=size_category or None,
-        closing_mechanism=closing_mechanism or None,
-        lock_type=lock_type or None,
-        has_straps=has_straps == "on",
-        strap_color=strap_color or None,
+        is_cabin_size=is_cabin_size == "on",
+        has_combination_lock=has_combination_lock == "on",
+        has_retractable_handle=has_retractable_handle == "on",
+        has_closing_straps=has_closing_straps == "on",
+        has_wheels=has_wheels == "on",
         has_ribbons=has_ribbons == "on",
         ribbon_description=ribbon_description or None,
         has_name_tag=has_name_tag == "on",
@@ -292,3 +232,25 @@ async def set_primary_image(
         url=f"/bags/{bag.id}?success=Primary+image+updated",
         status_code=status.HTTP_302_FOUND,
     )
+
+
+def _parse_float(v: str | None) -> float | None:
+    try:
+        return float(v) if v and v.strip() else None
+    except ValueError:
+        return None
+
+
+def _parse_int(v: str | None) -> int | None:
+    try:
+        return int(v) if v and v.strip() else None
+    except ValueError:
+        return None
+
+
+def _parse_date(v: str | None):
+    from datetime import date as _date
+    try:
+        return _date.fromisoformat(v) if v and v.strip() else None
+    except ValueError:
+        return None

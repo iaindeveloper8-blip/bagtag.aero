@@ -93,41 +93,101 @@
     </div>
     <div class="card-body">
       <div class="row g-3">
+        <!-- Colour -->
         <div class="col-md-4">
-          {{ sel('bag_type', BagType, bag.bag_type if bag else None, 'Bag type') }}
+          {{ sel('color', BagColor, bag.color if bag else None, 'Colour') }}
         </div>
+
+        <!-- Bag type — grouped by closing method -->
         <div class="col-md-4">
-          {{ sel('material', BagMaterial, bag.material if bag else None, 'Shell / material') }}
+          <label for="bag_type" class="form-label">Bag type</label>
+          <select class="form-select" id="bag_type" name="bag_type">
+            <option value="">— select —</option>
+            <optgroup label="Closes without zippers">
+              {% for t in BagType %}
+              {% if t.value | int < 20 %}
+              <option value="{{ t.value }}"
+                {% if bag and bag.bag_type == t.value %}selected{% endif %}>
+                {{ t.value }} — {{ LABEL_MAP.get(t.value, t.value) }}
+              </option>
+              {% endif %}
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Closes with zippers">
+              {% for t in BagType %}
+              {% if t.value | int >= 20 %}
+              <option value="{{ t.value }}"
+                {% if bag and bag.bag_type == t.value %}selected{% endif %}>
+                {{ t.value }} — {{ LABEL_MAP.get(t.value, t.value) }}
+              </option>
+              {% endif %}
+              {% endfor %}
+            </optgroup>
+          </select>
         </div>
+
+        <!-- Material -->
         <div class="col-md-4">
-          {{ sel('size_category', SizeCategory, bag.size_category if bag else None, 'Size category') }}
+          <label for="material" class="form-label">Material</label>
+          <select class="form-select" id="material" name="material">
+            <option value=""{% if not bag or not bag.material %} selected{% endif %}>Soft (default)</option>
+            {% for m in BagMaterial %}
+            <option value="{{ m.value }}"
+              {% if bag and bag.material == m.value %}selected{% endif %}>
+              {{ LABEL_MAP.get(m.value, m.value) }}
+            </option>
+            {% endfor %}
+          </select>
         </div>
-        <div class="col-md-6">
-          <label for="color_primary" class="form-label">Primary colour</label>
-          <input type="text" class="form-control" id="color_primary" name="color_primary"
-                 value="{{ bag.color_primary or '' }}" maxlength="50" placeholder="e.g. Black">
+
+        <!-- Basic element: cabin size (K) -->
+        <div class="col-12">
+          <label class="form-label d-block">Basic elements</label>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="is_cabin_size" name="is_cabin_size"
+                   {% if bag and bag.is_cabin_size %}checked{% endif %}>
+            <label class="form-check-label" for="is_cabin_size">
+              <strong>K</strong> — Cabin size
+            </label>
+          </div>
         </div>
-        <div class="col-md-6">
-          <label for="color_secondary" class="form-label">Secondary colour</label>
-          <input type="text" class="form-control" id="color_secondary" name="color_secondary"
-                 value="{{ bag.color_secondary or '' }}" maxlength="50" placeholder="e.g. Silver (trim)">
-        </div>
-        <div class="col-md-4">
-          {{ sel('handle_type', HandleType, bag.handle_type if bag else None, 'Handle type') }}
-        </div>
-        <div class="col-md-4">
-          {{ sel('wheel_type', WheelType, bag.wheel_type if bag else None, 'Wheels') }}
-        </div>
-        <div class="col-md-4">
-          <label for="external_pockets" class="form-label">External pockets</label>
-          <input type="number" class="form-control" id="external_pockets" name="external_pockets"
-                 value="{{ bag.external_pockets or '' }}" min="0" step="1">
-        </div>
-        <div class="col-md-6">
-          {{ sel('closing_mechanism', ClosingMechanism, bag.closing_mechanism if bag else None, 'Closing mechanism') }}
-        </div>
-        <div class="col-md-6">
-          {{ sel('lock_type', LockType, bag.lock_type if bag else None, 'Lock type') }}
+
+        <!-- External elements: C H S W (X is implied when none selected) -->
+        <div class="col-12">
+          <label class="form-label d-block">
+            External elements
+            <span class="text-muted fw-normal">(X — no external elements — is implied when none are selected)</span>
+          </label>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="has_combination_lock" name="has_combination_lock"
+                     {% if bag and bag.has_combination_lock %}checked{% endif %}>
+              <label class="form-check-label" for="has_combination_lock">
+                <strong>C</strong> — Combination locks
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="has_retractable_handle" name="has_retractable_handle"
+                     {% if bag and bag.has_retractable_handle %}checked{% endif %}>
+              <label class="form-check-label" for="has_retractable_handle">
+                <strong>H</strong> — Retractable handles
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="has_closing_straps" name="has_closing_straps"
+                     {% if bag and bag.has_closing_straps %}checked{% endif %}>
+              <label class="form-check-label" for="has_closing_straps">
+                <strong>S</strong> — Straps to close / secure
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="has_wheels" name="has_wheels"
+                     {% if bag and bag.has_wheels %}checked{% endif %}>
+              <label class="form-check-label" for="has_wheels">
+                <strong>W</strong> — Wheels / rollers
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -140,18 +200,6 @@
       <div class="row g-3">
         <div class="col-md-4">
           <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="has_straps" name="has_straps"
-                   {% if bag and bag.has_straps %}checked{% endif %}>
-            <label class="form-check-label" for="has_straps">Has straps / ribbons</label>
-          </div>
-        </div>
-        <div class="col-md-8">
-          <label for="strap_color" class="form-label">Strap colour / description</label>
-          <input type="text" class="form-control" id="strap_color" name="strap_color"
-                 value="{{ bag.strap_color or '' }}" maxlength="50">
-        </div>
-        <div class="col-md-4">
-          <div class="form-check mt-2">
             <input class="form-check-input" type="checkbox" id="has_ribbons" name="has_ribbons"
                    {% if bag and bag.has_ribbons %}checked{% endif %}>
             <label class="form-check-label" for="has_ribbons">Has ribbon / ID tag</label>
@@ -162,12 +210,17 @@
           <input type="text" class="form-control" id="ribbon_description" name="ribbon_description"
                  value="{{ bag.ribbon_description or '' }}" maxlength="200">
         </div>
-        <div class="col-12">
-          <div class="form-check">
+        <div class="col-md-4">
+          <div class="form-check mt-2">
             <input class="form-check-input" type="checkbox" id="has_name_tag" name="has_name_tag"
                    {% if bag and bag.has_name_tag %}checked{% endif %}>
             <label class="form-check-label" for="has_name_tag">Has a name / address tag attached</label>
           </div>
+        </div>
+        <div class="col-md-8">
+          <label for="external_pockets" class="form-label">External pockets</label>
+          <input type="number" class="form-control" id="external_pockets" name="external_pockets"
+                 value="{{ bag.external_pockets or '' }}" min="0" step="1">
         </div>
         <div class="col-12">
           <label for="distinguishing_marks" class="form-label">Other distinguishing marks</label>

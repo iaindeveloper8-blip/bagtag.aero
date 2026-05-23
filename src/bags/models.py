@@ -22,17 +22,16 @@ class Bag(Base):
     tare_weight_kg: Mapped[float | None] = mapped_column(Float)
 
     # IATA Baggage Identification Chart fields
-    bag_type: Mapped[str | None] = mapped_column(String(50))
-    color_primary: Mapped[str | None] = mapped_column(String(50))
-    color_secondary: Mapped[str | None] = mapped_column(String(50))
-    material: Mapped[str | None] = mapped_column(String(50))
-    handle_type: Mapped[str | None] = mapped_column(String(50))
-    wheel_type: Mapped[str | None] = mapped_column(String(50))
-    size_category: Mapped[str | None] = mapped_column(String(50))
-    closing_mechanism: Mapped[str | None] = mapped_column(String(50))
-    lock_type: Mapped[str | None] = mapped_column(String(50))
-    has_straps: Mapped[bool] = mapped_column(Boolean, default=False)
-    strap_color: Mapped[str | None] = mapped_column(String(50))
+    color: Mapped[str | None] = mapped_column(String(2))       # BagColor code, e.g. "BK"
+    bag_type: Mapped[str | None] = mapped_column(String(2))    # BagType code, e.g. "25"
+    material: Mapped[str | None] = mapped_column(String(1))    # BagMaterial code; None = soft
+    is_cabin_size: Mapped[bool] = mapped_column(Boolean, default=False)       # K
+    has_combination_lock: Mapped[bool] = mapped_column(Boolean, default=False)  # C
+    has_retractable_handle: Mapped[bool] = mapped_column(Boolean, default=False)  # H
+    has_closing_straps: Mapped[bool] = mapped_column(Boolean, default=False)  # S
+    has_wheels: Mapped[bool] = mapped_column(Boolean, default=False)          # W
+
+    # Distinguishing features (not part of the IATA code)
     has_ribbons: Mapped[bool] = mapped_column(Boolean, default=False)
     ribbon_description: Mapped[str | None] = mapped_column(String(200))
     has_name_tag: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -52,6 +51,27 @@ class Bag(Base):
         order_by="BagImage.uploaded_at",
     )
     trip_bags: Mapped[list["TripBag"]] = relationship("TripBag", back_populates="bag")  # type: ignore[name-defined]  # noqa: F821
+
+    @property
+    def iata_code(self) -> str | None:
+        if not self.color or not self.bag_type:
+            return None
+        code = self.color + self.bag_type
+        if self.material:
+            code += self.material
+        if self.is_cabin_size:
+            code += "K"
+        external = ""
+        if self.has_combination_lock:
+            external += "C"
+        if self.has_retractable_handle:
+            external += "H"
+        if self.has_closing_straps:
+            external += "S"
+        if self.has_wheels:
+            external += "W"
+        code += external or "X"
+        return code
 
     @property
     def primary_image(self) -> "BagImage | None":

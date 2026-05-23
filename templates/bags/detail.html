@@ -118,6 +118,13 @@
         <i class="bi bi-tag me-1"></i>IATA Baggage Identification
       </div>
       <div class="card-body">
+        {% if bag.iata_code %}
+        <div class="mb-3 p-2 bg-light rounded text-center">
+          <span class="fw-bold font-monospace fs-4 letter-spacing-1">{{ bag.iata_code }}</span>
+          <div class="text-muted small">IATA identification code</div>
+        </div>
+        {% endif %}
+
         <dl class="row iata-grid mb-0">
           {% macro iata_row(label, value) %}
           {% if value %}
@@ -126,40 +133,43 @@
           {% endif %}
           {% endmacro %}
 
+          {{ iata_row('Colour', bag.color) }}
           {{ iata_row('Type', bag.bag_type) }}
+          {% if bag.material %}
           {{ iata_row('Material', bag.material) }}
-          {{ iata_row('Size category', bag.size_category) }}
-
-          {% if bag.color_primary %}
-          <dt class="col-sm-5">Colour</dt>
-          <dd class="col-sm-7">
-            {{ bag.color_primary | title }}
-            {% if bag.color_secondary %} / {{ bag.color_secondary | title }}{% endif %}
-          </dd>
+          {% else %}
+          {% if bag.bag_type %}
+          <dt class="col-sm-5">Material</dt>
+          <dd class="col-sm-7">Soft (default)</dd>
           {% endif %}
-
-          {{ iata_row('Handle', bag.handle_type) }}
-          {{ iata_row('Wheels', bag.wheel_type) }}
-          {{ iata_row('Closing', bag.closing_mechanism) }}
-          {{ iata_row('Lock', bag.lock_type) }}
-
-          {% if bag.external_pockets %}
-          <dt class="col-sm-5">External pockets</dt>
-          <dd class="col-sm-7">{{ bag.external_pockets }}</dd>
           {% endif %}
         </dl>
 
+        <!-- External elements -->
+        {% set ext = [] %}
+        {% if bag.is_cabin_size %}{% set _ = ext.append('K — Cabin size') %}{% endif %}
+        {% if bag.has_combination_lock %}{% set _ = ext.append('C — Combination locks') %}{% endif %}
+        {% if bag.has_retractable_handle %}{% set _ = ext.append('H — Retractable handles') %}{% endif %}
+        {% if bag.has_closing_straps %}{% set _ = ext.append('S — Closing straps') %}{% endif %}
+        {% if bag.has_wheels %}{% set _ = ext.append('W — Wheels / rollers') %}{% endif %}
+        {% if bag.bag_type %}
+        <hr class="my-2">
+        <div class="d-flex flex-wrap gap-2">
+          {% if ext %}
+          {% for e in ext %}
+          <span class="badge bg-secondary">{{ e }}</span>
+          {% endfor %}
+          {% else %}
+          <span class="badge bg-light text-dark border">X — No external elements</span>
+          {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Distinguishing features -->
-        {% set has_features = bag.has_straps or bag.has_ribbons or bag.has_name_tag %}
+        {% set has_features = bag.has_ribbons or bag.has_name_tag %}
         {% if has_features %}
         <hr class="my-2">
         <div class="d-flex flex-wrap gap-2">
-          {% if bag.has_straps %}
-          <span class="badge bg-light text-dark border">
-            <i class="bi bi-strap me-1"></i>Straps
-            {% if bag.strap_color %}({{ bag.strap_color }}){% endif %}
-          </span>
-          {% endif %}
           {% if bag.has_ribbons %}
           <span class="badge bg-light text-dark border">
             <i class="bi bi-tags me-1"></i>Ribbons
@@ -170,6 +180,11 @@
           <span class="badge bg-light text-dark border"><i class="bi bi-person-badge me-1"></i>Name tag</span>
           {% endif %}
         </div>
+        {% endif %}
+
+        {% if bag.external_pockets %}
+        <hr class="my-2">
+        <p class="mb-0 small"><strong>External pockets:</strong> {{ bag.external_pockets }}</p>
         {% endif %}
 
         {% if bag.distinguishing_marks %}

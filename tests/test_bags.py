@@ -49,16 +49,12 @@ async def test_create_bag_all_iata_fields(auth_client):
             "model": "Omni Max",
             "volume_liters": "68",
             "tare_weight_kg": "3.2",
-            "bag_type": "suitcase",
-            "material": "hard_polycarbonate",
-            "size_category": "checked_medium",
-            "color_primary": "Black",
-            "handle_type": "retractable_and_side",
-            "wheel_type": "four_wheel_spinner",
-            "closing_mechanism": "zipper_double",
-            "lock_type": "tsa_combination",
-            "has_straps": "on",
-            "strap_color": "Red",
+            "color": "BK",
+            "bag_type": "23",
+            "material": "R",
+            "has_retractable_handle": "on",
+            "has_wheels": "on",
+            "has_combination_lock": "on",
             "external_pockets": "2",
         },
         follow_redirects=False,
@@ -93,14 +89,16 @@ async def test_bag_detail_shows_iata_fields(auth_client, user, db):
         user.id,
         BagCreate(
             name=_bag_name(),
-            material="hard_polycarbonate",
-            size_category="carry_on",
-            color_primary="Blue",
+            color="BU",
+            bag_type="26",
+            material="R",
+            is_cabin_size=True,
         ),
     )
     resp = await auth_client.get(f"/bags/{bag.id}")
     assert resp.status_code == 200
     assert "Blue" in resp.text
+    assert "BU26RKX" in resp.text
 
 
 async def test_bag_not_found_returns_404(auth_client):

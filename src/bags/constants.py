@@ -1,109 +1,91 @@
 from enum import StrEnum
 
 
+class BagColor(StrEnum):
+    WHITE = "WT"
+    BLACK = "BK"
+    GREY = "GY"
+    BLUE = "BU"
+    PURPLE = "PU"
+    RED = "RD"
+    YELLOW = "YW"
+    BEIGE = "BE"
+    BROWN = "BN"
+    GREEN = "GN"
+    MULTI = "MC"
+    PATTERN = "PR"
+
+
 class BagType(StrEnum):
-    SUITCASE = "suitcase"
-    BACKPACK = "backpack"
-    DUFFEL = "duffel"
-    GARMENT_BAG = "garment_bag"
-    BRIEFCASE = "briefcase"
-    TOTE = "tote"
-    OTHER = "other"
+    # Without zippers (01–12)
+    HORIZONTAL_HARD_SHELL = "01"
+    UPRIGHT = "02"
+    HORIZONTAL_NON_EXPANDABLE = "03"
+    HORIZONTAL_EXPANDABLE = "05"
+    BRIEFCASE = "06"
+    DOCUMENT_CASE = "07"
+    MILITARY = "08"
+    PLASTIC_LAUNDRY = "09"
+    BOX = "10"
+    STORAGE_CONTAINER = "12"
+    # With zippers (20–29)
+    GARMENT_BAG = "20"
+    UPRIGHT_SOFT = "22"
+    HORIZONTAL_SUITCASE = "23"
+    DUFFEL_SPORT = "25"
+    LAPTOP_OVERNIGHT = "26"
+    EXPANDABLE_UPRIGHT = "27"
+    MATTED_WOVEN = "28"
+    BACKPACK = "29"
 
 
 class BagMaterial(StrEnum):
-    HARD_ABS = "hard_abs"
-    HARD_POLYCARBONATE = "hard_polycarbonate"
-    HARD_ALUMINUM = "hard_aluminum"
-    SOFT_NYLON = "soft_nylon"
-    SOFT_POLYESTER = "soft_polyester"
-    CANVAS = "canvas"
-    LEATHER = "leather"
-    OTHER = "other"
-
-
-class HandleType(StrEnum):
-    TOP_ONLY = "top_only"
-    SIDE_ONLY = "side_only"
-    TOP_AND_SIDE = "top_and_side"
-    RETRACTABLE = "retractable"
-    RETRACTABLE_AND_SIDE = "retractable_and_side"
-    NONE = "none"
-
-
-class WheelType(StrEnum):
-    NONE = "none"
-    TWO_WHEEL = "two_wheel"
-    FOUR_WHEEL_SPINNER = "four_wheel_spinner"
-
-
-class SizeCategory(StrEnum):
-    PERSONAL_ITEM = "personal_item"
-    CARRY_ON = "carry_on"
-    CABIN_MAX = "cabin_max"
-    CHECKED_SMALL = "checked_small"
-    CHECKED_MEDIUM = "checked_medium"
-    CHECKED_LARGE = "checked_large"
-    OVERSIZED = "oversized"
-
-
-class ClosingMechanism(StrEnum):
-    ZIPPER_SINGLE = "zipper_single"
-    ZIPPER_DOUBLE = "zipper_double"
-    CLIPS_LATCHES = "clips_latches"
-    COMBINATION = "combination"
-
-
-class LockType(StrEnum):
-    NONE = "none"
-    KEY = "key"
-    COMBINATION = "combination"
-    TSA_KEY = "tsa_key"
-    TSA_COMBINATION = "tsa_combination"
+    """Material modifier letter; absent from the code means soft (IATA default)."""
+    DUAL = "D"
+    LEATHER = "L"
+    METAL = "M"
+    RIGID = "R"
+    TWEED = "T"
 
 
 LABEL_MAP: dict[str, str] = {
-    # BagType
-    "suitcase": "Suitcase",
-    "backpack": "Backpack",
-    "duffel": "Duffel Bag",
-    "garment_bag": "Garment Bag",
-    "briefcase": "Briefcase",
-    "tote": "Tote",
+    # BagColor
+    "WT": "White",
+    "BK": "Black",
+    "GY": "Grey",
+    "BU": "Blue",
+    "PU": "Purple",
+    "RD": "Red",
+    "YW": "Yellow",
+    "BE": "Beige",
+    "BN": "Brown",
+    "GN": "Green",
+    "MC": "Multi-Coloured",
+    "PR": "Pattern",
+    # BagType — without zippers
+    "01": "Horizontal design hard shell",
+    "02": "Upright design",
+    "03": "Horizontal design suitcase (non-expandable)",
+    "05": "Horizontal design suitcase (expandable)",
+    "06": "Briefcase",
+    "07": "Document case",
+    "08": "Military style bag",
+    "09": "Plastic / laundry bag",
+    "10": "Box",
+    "12": "Storage container",
+    # BagType — with zippers
+    "20": "Garment bag / suit carrier",
+    "22": "Upright design (soft material)",
+    "23": "Horizontal design suitcase",
+    "25": "Duffel / sport bag",
+    "26": "Laptop / overnight bag",
+    "27": "Expandable upright",
+    "28": "Matted woven bag",
+    "29": "Backpack / rucksack",
     # BagMaterial
-    "hard_abs": "Hard Shell (ABS)",
-    "hard_polycarbonate": "Hard Shell (Polycarbonate)",
-    "hard_aluminum": "Hard Shell (Aluminium)",
-    "soft_nylon": "Soft (Nylon)",
-    "soft_polyester": "Soft (Polyester)",
-    "canvas": "Canvas",
-    "leather": "Leather",
-    # HandleType
-    "top_only": "Top handle only",
-    "side_only": "Side handle only",
-    "top_and_side": "Top & side handles",
-    "retractable": "Retractable / telescoping",
-    "retractable_and_side": "Retractable + side handle",
-    # WheelType
-    "two_wheel": "2-wheel",
-    "four_wheel_spinner": "4-wheel spinner",
-    # SizeCategory
-    "personal_item": "Personal item",
-    "carry_on": "Carry-on",
-    "cabin_max": "Cabin max",
-    "checked_small": "Checked — small",
-    "checked_medium": "Checked — medium",
-    "checked_large": "Checked — large",
-    "oversized": "Oversized",
-    # ClosingMechanism
-    "zipper_single": "Single zipper",
-    "zipper_double": "Double zipper",
-    "clips_latches": "Clips / latches",
-    "combination": "Combination",
-    # LockType
-    "tsa_key": "TSA key lock",
-    "tsa_combination": "TSA combination lock",
-    # Shared
-    "none": "None",
-    "other": "Other",
+    "D": "Dual soft/hard",
+    "L": "Leather",
+    "M": "Metal",
+    "R": "Rigid (hard shell)",
+    "T": "Tweed",
 }
