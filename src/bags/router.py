@@ -61,6 +61,7 @@ async def create_bag(
     model: Annotated[str | None, Form()] = None,
     purchased_at: Annotated[str | None, Form()] = None,
     purchase_price: Annotated[str | None, Form()] = None,
+    receipt: Annotated[UploadFile | None, File()] = None,
     volume_liters: Annotated[str | None, Form()] = None,
     tare_weight_kg: Annotated[str | None, Form()] = None,
     color: Annotated[str | None, Form()] = None,
@@ -92,6 +93,8 @@ async def create_bag(
         notes=notes or None,
     )
     bag = await bag_service.create_bag(db, user.id, data)
+    if receipt and receipt.filename:
+        await bag_service.save_receipt(db, bag, receipt)
     return RedirectResponse(
         url=f"/bags/{bag.id}?success=Bag+added+successfully",
         status_code=status.HTTP_302_FOUND,
@@ -125,6 +128,7 @@ async def update_bag(
     model: Annotated[str | None, Form()] = None,
     purchased_at: Annotated[str | None, Form()] = None,
     purchase_price: Annotated[str | None, Form()] = None,
+    receipt: Annotated[UploadFile | None, File()] = None,
     volume_liters: Annotated[str | None, Form()] = None,
     tare_weight_kg: Annotated[str | None, Form()] = None,
     color: Annotated[str | None, Form()] = None,
@@ -156,6 +160,8 @@ async def update_bag(
         notes=notes or None,
     )
     await bag_service.update_bag(db, bag, data)
+    if receipt and receipt.filename:
+        await bag_service.save_receipt(db, bag, receipt)
     return RedirectResponse(
         url=f"/bags/{bag.id}?success=Bag+updated",
         status_code=status.HTTP_302_FOUND,

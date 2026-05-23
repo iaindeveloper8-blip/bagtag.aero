@@ -18,6 +18,9 @@ from src.config import settings
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
+_ALLOWED_RECEIPT_CONTENT_TYPES = _ALLOWED_CONTENT_TYPES | {"application/pdf"}
+_ALLOWED_RECEIPT_EXTENSIONS = _ALLOWED_EXTENSIONS | {".pdf"}
+
 
 async def get_bags(db: AsyncSession, user_id: int) -> list[Bag]:
     result = await db.execute(
@@ -58,17 +61,47 @@ async def update_bag(db: AsyncSession, bag: Bag, data: BagEditSchema) -> Bag:
 
 
 async def delete_bag(db: AsyncSession, bag: Bag) -> None:
-    # Remove image files from disk
     for image in bag.images:
-        _delete_image_file(image.filename)
+        _delete_upload_file(image.filename)
+    if bag.receipt_filename:
+        _delete_upload_file(bag.receipt_filename)
     await db.delete(bag)
     await db.commit()
 
 
-def _delete_image_file(filename: str) -> None:
+def _delete_upload_file(filename: str) -> None:
     path = settings.UPLOAD_DIR / filename
     if path.exists():
         path.unlink(missing_ok=True)
+
+
+async def save_receipt(db: AsyncSession, bag: Bag, file: UploadFile) -> None:
+    content_type = file.content_type or ""
+    if content_type not in _ALLOWED_RECEIPT_CONTENT_TYPES:
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix not in _ALLOWED_RECEIPT_EXTENSIONS:
+            raise InvalidImageType()
+
+    content = await file.read()
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if len(content) > max_bytes:
+        raise ImageTooLarge(settings.MAX_UPLOAD_SIZE_MB)
+
+    suffix = Path(file.filename or "receipt.pdf").suffix.lower()
+    if suffix not in _ALLOWED_RECEIPT_EXTENSIONS:
+        suffix = ".pdf"
+
+    if bag.receipt_filename:
+        _delete_upload_file(bag.receipt_filename)
+
+    filename = f"{uuid.uuid4().hex}{suffix}"
+    settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    async with aiofiles.open(settings.UPLOAD_DIR / filename, "wb") as f:
+        await f.write(content)
+
+    bag.receipt_filename = filename
+    bag.receipt_original_filename = file.filename or filename
+    await db.commit()
 
 
 async def add_image(
@@ -122,7 +155,7 @@ async def delete_image(db: AsyncSession, bag: Bag, image_id: int) -> None:
     if not image:
         raise ImageNotFound()
     was_primary = image.is_primary
-    _delete_image_file(image.filename)
+    _delete_upload_file(image.filename)
     await db.delete(image)
     await db.commit()
 

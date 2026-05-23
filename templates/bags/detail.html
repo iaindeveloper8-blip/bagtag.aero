@@ -90,19 +90,12 @@
 
   <!-- Details column -->
   <div class="col-md-7">
-    <!-- Basics -->
+    <!-- Details -->
+    {% if bag.volume_liters or bag.tare_weight_kg %}
     <div class="card mb-3">
       <div class="card-header bg-light small fw-semibold"><i class="bi bi-info-circle me-1"></i>Details</div>
       <div class="card-body">
         <dl class="row iata-grid mb-0">
-          {% if bag.purchased_at %}
-          <dt class="col-sm-4">Purchased</dt>
-          <dd class="col-sm-8">{{ bag.purchased_at.strftime('%d %b %Y') }}</dd>
-          {% endif %}
-          {% if bag.purchase_price %}
-          <dt class="col-sm-4">Price paid</dt>
-          <dd class="col-sm-8">£{{ '%.2f' | format(bag.purchase_price) }}</dd>
-          {% endif %}
           {% if bag.volume_liters %}
           <dt class="col-sm-4">Volume</dt>
           <dd class="col-sm-8">{{ bag.volume_liters }} litres</dd>
@@ -114,6 +107,34 @@
         </dl>
       </div>
     </div>
+    {% endif %}
+
+    <!-- Purchase -->
+    {% if bag.purchased_at or bag.purchase_price or bag.receipt_filename %}
+    <div class="card mb-3">
+      <div class="card-header bg-light small fw-semibold"><i class="bi bi-receipt me-1"></i>Purchase</div>
+      <div class="card-body">
+        <dl class="row iata-grid mb-0">
+          {% if bag.purchased_at %}
+          <dt class="col-sm-4">Date</dt>
+          <dd class="col-sm-8">{{ bag.purchased_at.strftime('%d %b %Y') }}</dd>
+          {% endif %}
+          {% if bag.purchase_price %}
+          <dt class="col-sm-4">Price paid</dt>
+          <dd class="col-sm-8">£{{ '%.2f' | format(bag.purchase_price) }}</dd>
+          {% endif %}
+          {% if bag.receipt_filename %}
+          <dt class="col-sm-4">Receipt</dt>
+          <dd class="col-sm-8">
+            <a href="/static/uploads/{{ bag.receipt_filename }}" target="_blank" rel="noopener">
+              <i class="bi bi-paperclip me-1"></i>{{ bag.receipt_original_filename }}
+            </a>
+          </dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- IATA Identification -->
     <div class="card mb-3">

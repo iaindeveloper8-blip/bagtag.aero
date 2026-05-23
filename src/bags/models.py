@@ -31,6 +31,9 @@ class Bag(Base):
     has_closing_straps: Mapped[bool] = mapped_column(Boolean, default=False)  # S
     has_wheels: Mapped[bool] = mapped_column(Boolean, default=False)  # W
 
+    receipt_filename: Mapped[str | None] = mapped_column(String(200))
+    receipt_original_filename: Mapped[str | None] = mapped_column(String(200))
+
     notes: Mapped[str | None] = mapped_column(Text)
     public_token: Mapped[str | None] = mapped_column(
         String(12), unique=True, nullable=True, index=True

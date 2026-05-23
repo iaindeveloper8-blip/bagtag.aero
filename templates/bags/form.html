@@ -35,7 +35,8 @@
   {% if bag %}Edit {{ bag.name }}{% else %}Add New Bag{% endif %}
 </h1>
 
-<form method="post" action="{% if bag %}/bags/{{ bag.id }}/edit{% else %}/bags/new{% endif %}">
+<form method="post" enctype="multipart/form-data"
+      action="{% if bag %}/bags/{{ bag.id }}/edit{% else %}/bags/new{% endif %}">
   <!-- Section 1: Basic Info -->
   <div class="card mb-4">
     <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i>Basic Information</div>
@@ -57,35 +58,54 @@
           <input type="text" class="form-control" id="model" name="model"
                  value="{{ bag.model or '' }}" maxlength="100" placeholder="e.g. Omni Max">
         </div>
-        <div class="col-md-4">
-          <label for="purchased_at" class="form-label">Date purchased</label>
-          <input type="date" class="form-control" id="purchased_at" name="purchased_at"
-                 value="{{ bag.purchased_at.isoformat() if bag and bag.purchased_at else '' }}">
+        <div class="col-md-6">
+          <label for="volume_liters" class="form-label">Volume (L)</label>
+          <input type="number" class="form-control" id="volume_liters" name="volume_liters"
+                 value="{{ bag.volume_liters or '' }}" min="0" step="0.1">
         </div>
-        <div class="col-md-4">
-          <label for="purchase_price" class="form-label">Purchase price (£)</label>
-          <input type="number" class="form-control" id="purchase_price" name="purchase_price"
-                 value="{{ bag.purchase_price or '' }}" min="0" step="0.01">
-        </div>
-        <div class="col-md-4">
-          <div class="row g-2">
-            <div class="col-6">
-              <label for="volume_liters" class="form-label">Volume (L)</label>
-              <input type="number" class="form-control" id="volume_liters" name="volume_liters"
-                     value="{{ bag.volume_liters or '' }}" min="0" step="0.1">
-            </div>
-            <div class="col-6">
-              <label for="tare_weight_kg" class="form-label">Tare (kg)</label>
-              <input type="number" class="form-control" id="tare_weight_kg" name="tare_weight_kg"
-                     value="{{ bag.tare_weight_kg or '' }}" min="0" step="0.01">
-            </div>
-          </div>
+        <div class="col-md-6">
+          <label for="tare_weight_kg" class="form-label">Tare weight (kg)</label>
+          <input type="number" class="form-control" id="tare_weight_kg" name="tare_weight_kg"
+                 value="{{ bag.tare_weight_kg or '' }}" min="0" step="0.01">
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Section 2: IATA Identification -->
+  <!-- Section 2: Purchase -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-receipt me-1"></i>Purchase</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="purchased_at" class="form-label">Date purchased</label>
+          <input type="date" class="form-control" id="purchased_at" name="purchased_at"
+                 value="{{ bag.purchased_at.isoformat() if bag and bag.purchased_at else '' }}">
+        </div>
+        <div class="col-md-6">
+          <label for="purchase_price" class="form-label">Purchase price (£)</label>
+          <input type="number" class="form-control" id="purchase_price" name="purchase_price"
+                 value="{{ bag.purchase_price or '' }}" min="0" step="0.01">
+        </div>
+        <div class="col-12">
+          <label for="receipt" class="form-label">Receipt</label>
+          {% if bag and bag.receipt_filename %}
+          <div class="mb-2 d-flex align-items-center gap-2">
+            <i class="bi bi-paperclip text-muted"></i>
+            <a href="/static/uploads/{{ bag.receipt_filename }}" target="_blank" rel="noopener"
+               class="small">{{ bag.receipt_original_filename }}</a>
+            <span class="text-muted small">— upload a new file below to replace it</span>
+          </div>
+          {% endif %}
+          <input type="file" class="form-control" id="receipt" name="receipt"
+                 accept=".pdf,.jpg,.jpeg,.png,.webp">
+          <div class="form-text">PDF or image, max 10 MB</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: IATA Identification -->
   <div class="card mb-4">
     <div class="card-header fw-semibold">
       <i class="bi bi-tag me-1"></i>IATA Baggage Identification Chart
@@ -193,7 +213,7 @@
     </div>
   </div>
 
-  <!-- Section 3: Notes -->
+  <!-- Section 4: Notes -->
   <div class="card mb-4">
     <div class="card-header fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
     <div class="card-body">
