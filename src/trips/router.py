@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request, status
@@ -81,6 +82,13 @@ async def trip_detail(
 
     available_bags = await trip_service.get_available_bags(db, trip, user.id)
     packing_templates = await packing_service.get_templates(db, user.id)
+    today = date.today()
+    is_in_progress = bool(
+        trip.departure_date
+        and trip.return_date
+        and trip.departure_date <= today <= trip.return_date
+    )
+    active_checkin = trip_service.compute_active_checkin(trip)
     return templates.TemplateResponse(
         request=request,
         name="trips/detail.html",
@@ -90,6 +98,8 @@ async def trip_detail(
             "available_bags": available_bags,
             "packing_templates": packing_templates,
             "TRIP_TYPE_LABELS": TRIP_TYPE_LABELS,
+            "is_in_progress": is_in_progress,
+            "active_checkin": active_checkin,
         },
     )
 
@@ -306,5 +316,119 @@ async def remove_bag(
     await trip_service.remove_bag(db, trip, bag_id)
     return RedirectResponse(
         url=f"/trips/{trip.id}?success=Bag+removed&tab=bags",
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
+@router.get("/{trip_id}/checkin", response_class=HTMLResponse)
+async def checkin_page(
+    request: Request,
+    trip: OwnedTrip,
+    user: CurrentUser,
+):
+    active_checkin = trip_service.compute_active_checkin(trip)
+    bag_checkin_by_bag = (
+        {bc.bag_id: bc for bc in active_checkin.bag_checkins} if active_checkin else {}
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="trips/checkin.html",
+        context={
+            "trip": trip,
+            "user": user,
+            "active_checkin": active_checkin,
+            "bag_checkin_by_bag": bag_checkin_by_bag,
+        },
+    )
+
+
+@router.post("/{trip_id}/checkin")
+async def save_checkin(
+    request: Request,
+    trip: OwnedTrip,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    form = await request.form()
+    checkin_data: dict[int, dict] = {}
+
+    for tb in trip.trip_bags:
+        bag_id = tb.bag_id
+        checkin_status = form.get(f"status_{bag_id}")
+        if not checkin_status:
+            continue
+
+        raw_lp = form.get(f"licence_plate_{bag_id}") or ""
+        licence_plate = raw_lp.strip().upper()[:10] or None
+
+        weight_kg = None
+        raw_weight = form.get(f"weight_kg_{bag_id}") or ""
+        try:
+            if raw_weight.strip():
+                weight_kg = float(raw_weight)
+        except (ValueError, AttributeError):
+            pass
+
+        checkin_data[bag_id] = {
+            "status": str(checkin_status),
+            "licence_plate_number": licence_plate,
+            "weight_kg": weight_kg,
+        }
+
+    active_checkin = trip_service.compute_active_checkin(trip)
+    checkin = await trip_service.save_checkin(db, trip, active_checkin, checkin_data)
+
+    for tb in trip.trip_bags:
+        receipt_file = form.get(f"receipt_{tb.bag_id}")
+        if receipt_file and hasattr(receipt_file, "filename") and receipt_file.filename:
+            await trip_service.save_checkin_bag_receipt(db, checkin.id, tb.bag_id, receipt_file)
+
+    return RedirectResponse(
+        url=f"/trips/{trip.id}?success=Check-in+saved&tab=bags",
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
+@router.get("/{trip_id}/collect", response_class=HTMLResponse)
+async def collect_page(
+    request: Request,
+    trip: OwnedTrip,
+    user: CurrentUser,
+):
+    active_checkin = trip_service.compute_active_checkin(trip)
+    if not active_checkin:
+        return RedirectResponse(
+            url=f"/trips/{trip.id}?error=No+checked+bags+to+collect&tab=bags",
+            status_code=status.HTTP_302_FOUND,
+        )
+    checked_in = [bc for bc in active_checkin.bag_checkins if bc.status == "checked_in"]
+    return templates.TemplateResponse(
+        request=request,
+        name="trips/collect.html",
+        context={
+            "trip": trip,
+            "user": user,
+            "active_checkin": active_checkin,
+            "checked_in": checked_in,
+        },
+    )
+
+
+@router.post("/{trip_id}/collect")
+async def save_collect(
+    request: Request,
+    trip: OwnedTrip,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    active_checkin = trip_service.compute_active_checkin(trip)
+    if not active_checkin:
+        return RedirectResponse(
+            url=f"/trips/{trip.id}?error=No+checked+bags+to+collect&tab=bags",
+            status_code=status.HTTP_302_FOUND,
+        )
+    form = await request.form()
+    collected_ids = [int(v) for k, v in form.multi_items() if k == "collected_bag_id"]
+    await trip_service.mark_checkin_bags_collected(db, active_checkin, collected_ids)
+    return RedirectResponse(
+        url=f"/trips/{trip.id}?success=Bag+collection+confirmed&tab=bags",
         status_code=status.HTTP_302_FOUND,
     )

@@ -94,9 +94,22 @@
             </div>
             {% endif %}
           </div>
-          <a href="/trips/{{ trip.id }}" class="btn btn-sm btn-success flex-shrink-0">
-            View Trip
-          </a>
+          <div class="d-flex flex-column gap-2 flex-shrink-0">
+            {% set active = active_checkins.get(trip.id) %}
+            {% if trip.trip_bags %}
+            <a href="/trips/{{ trip.id }}/checkin" class="btn btn-sm btn-primary">
+              <i class="bi bi-tag me-1"></i>{{ 'Update Check In' if active else 'Check In Bags' }}
+            </a>
+            {% if active %}
+            <a href="/trips/{{ trip.id }}/collect" class="btn btn-sm btn-success">
+              <i class="bi bi-bag-check me-1"></i>Collect Bags
+            </a>
+            {% endif %}
+            {% endif %}
+            <a href="/trips/{{ trip.id }}" class="btn btn-sm btn-outline-success">
+              View Trip
+            </a>
+          </div>
         </div>
       </div>
     </div>

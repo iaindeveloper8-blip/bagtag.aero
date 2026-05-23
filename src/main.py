@@ -27,7 +27,8 @@ from src.exceptions import RedirectToLogin
 from src.notifications import router as notifications_router
 from src.packing import router as packing_router
 from src.trips import router as trips_router
-from src.trips.models import Trip
+from src.trips.models import Trip, TripCheckin
+from src.trips.service import compute_active_checkin
 
 
 @asynccontextmanager
@@ -75,6 +76,23 @@ async def lifespan(app: FastAPI):
                     "ALTER TABLE flight ADD COLUMN rerouted_from_id INTEGER REFERENCES flight(id) ON DELETE SET NULL"
                 )
             )
+
+        # Add check-in columns to trip_bag
+        result = await conn.execute(text("PRAGMA table_info(trip_bag)"))
+        trip_bag_cols = [row[1] for row in result.fetchall()]
+        for col, definition in [
+            ("checkin_status", "VARCHAR(20)"),
+            ("licence_plate_number", "VARCHAR(10)"),
+            ("weight_kg", "FLOAT"),
+            ("receipt_filename", "VARCHAR(200)"),
+            ("checked_in_at", "DATETIME"),
+            ("collected_at", "DATETIME"),
+        ]:
+            if col not in trip_bag_cols:
+                await conn.execute(text(f"ALTER TABLE trip_bag ADD COLUMN {col} {definition}"))
+
+        # Drop obsolete flight_checkin table if it exists
+        await conn.execute(text("DROP TABLE IF EXISTS flight_checkin"))
 
     async with SessionFactory() as db:
         from src.packing.seed import seed_default_templates
@@ -145,10 +163,15 @@ async def dashboard(
             Trip.departure_date <= today,
             Trip.return_date >= today,
         )
-        .options(selectinload(Trip.flights).selectinload(Flight.reroutings))
+        .options(
+            selectinload(Trip.flights).selectinload(Flight.reroutings),
+            selectinload(Trip.trip_bags),
+            selectinload(Trip.checkins).selectinload(TripCheckin.bag_checkins),
+        )
         .order_by(Trip.departure_date.asc())
     )
     current_trips = list(current_trips_result.scalars().all())
+    active_checkins = {t.id: compute_active_checkin(t) for t in current_trips}
 
     upcoming_result = await db.execute(
         select(Trip)
@@ -168,5 +191,6 @@ async def dashboard(
             "trip_count": trip_count,
             "current_trips": current_trips,
             "upcoming_trips": upcoming_trips,
+            "active_checkins": active_checkins,
         },
     )

@@ -1,12 +1,36 @@
+import uuid
+from datetime import datetime
+from pathlib import Path
+
+import aiofiles
+from fastapi import UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.bags.models import Bag
+from src.config import settings
 from src.packing.models import PackingList, PackingListItem
 from src.trips.exceptions import BagAlreadyOnTrip, FlightNotFound, TripNotFound
-from src.trips.models import Flight, Trip, TripBag
+from src.trips.models import Flight, Trip, TripBag, TripCheckin, TripCheckinBag
 from src.trips.schemas import FlightCreate, TripCreate, TripUpdate
+
+_ALLOWED_RECEIPT_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+}
+_ALLOWED_RECEIPT_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf"}
+
+
+def compute_active_checkin(trip: Trip) -> TripCheckin | None:
+    """Return the most recent check-in with at least one uncollected checked-in bag."""
+    for checkin in trip.checkins:  # already ordered newest-first
+        if any(b.status == "checked_in" and not b.collected_at for b in checkin.bag_checkins):
+            return checkin
+    return None
 
 
 async def get_trips(db: AsyncSession, user_id: int) -> list[Trip]:
@@ -29,6 +53,10 @@ async def get_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
         .options(
             selectinload(Trip.flights).selectinload(Flight.reroutings),
             selectinload(Trip.trip_bags).selectinload(TripBag.bag).selectinload(Bag.images),
+            selectinload(Trip.checkins)
+            .selectinload(TripCheckin.bag_checkins)
+            .selectinload(TripCheckinBag.bag)
+            .selectinload(Bag.images),
             selectinload(Trip.packing_list)
             .selectinload(PackingList.items)
             .selectinload(PackingListItem.bag),
@@ -142,3 +170,102 @@ async def remove_bag(db: AsyncSession, trip: Trip, bag_id: int) -> None:
     if trip_bag:
         await db.delete(trip_bag)
         await db.commit()
+
+
+async def save_checkin(
+    db: AsyncSession,
+    trip: Trip,
+    active_checkin: TripCheckin | None,
+    checkin_data: dict[int, dict],
+) -> TripCheckin:
+    """Create a new check-in or update the active one."""
+    now = datetime.utcnow()
+
+    if active_checkin is None:
+        checkin = TripCheckin(trip_id=trip.id)
+        db.add(checkin)
+        await db.flush()
+        bag_checkins_by_bag: dict[int, TripCheckinBag] = {}
+    else:
+        checkin = active_checkin
+        bag_checkins_by_bag = {b.bag_id: b for b in checkin.bag_checkins}
+
+    for bag_id, data in checkin_data.items():
+        existing = bag_checkins_by_bag.get(bag_id)
+        if existing:
+            existing.status = data["status"]
+            existing.licence_plate_number = data.get("licence_plate_number")
+            existing.weight_kg = data.get("weight_kg")
+            if data["status"] == "checked_in" and not existing.checked_in_at:
+                existing.checked_in_at = now
+            elif data["status"] == "carry_on":
+                existing.checked_in_at = None
+        else:
+            bag_checkin = TripCheckinBag(
+                checkin_id=checkin.id,
+                bag_id=bag_id,
+                status=data["status"],
+                licence_plate_number=data.get("licence_plate_number"),
+                weight_kg=data.get("weight_kg"),
+                checked_in_at=now if data["status"] == "checked_in" else None,
+            )
+            db.add(bag_checkin)
+
+    await db.commit()
+    return checkin
+
+
+async def save_checkin_bag_receipt(
+    db: AsyncSession, checkin_id: int, bag_id: int, file: UploadFile
+) -> None:
+    bag_checkin = (
+        await db.execute(
+            select(TripCheckinBag).where(
+                TripCheckinBag.checkin_id == checkin_id,
+                TripCheckinBag.bag_id == bag_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not bag_checkin:
+        return
+
+    content_type = file.content_type or ""
+    suffix = Path(file.filename or "").suffix.lower()
+    if (
+        content_type not in _ALLOWED_RECEIPT_CONTENT_TYPES
+        and suffix not in _ALLOWED_RECEIPT_EXTENSIONS
+    ):
+        return
+
+    content = await file.read()
+    if not content:
+        return
+
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if len(content) > max_bytes:
+        return
+
+    if suffix not in _ALLOWED_RECEIPT_EXTENSIONS:
+        suffix = ".jpg"
+
+    if bag_checkin.receipt_filename:
+        (settings.UPLOAD_DIR / bag_checkin.receipt_filename).unlink(missing_ok=True)
+
+    filename = f"checkin_{uuid.uuid4().hex}{suffix}"
+    settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    async with aiofiles.open(settings.UPLOAD_DIR / filename, "wb") as f:
+        await f.write(content)
+
+    bag_checkin.receipt_filename = filename
+    await db.commit()
+
+
+async def mark_checkin_bags_collected(
+    db: AsyncSession, checkin: TripCheckin, bag_ids: list[int]
+) -> None:
+    now = datetime.utcnow()
+    bag_ids_set = set(bag_ids)
+    for bc in checkin.bag_checkins:
+        if bc.bag_id in bag_ids_set:
+            bc.collected_at = now
+    await db.commit()

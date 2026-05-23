@@ -24,7 +24,17 @@
       {% endif %}
     </div>
   </div>
-  <div class="d-flex gap-2 flex-shrink-0">
+  <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
+    {% if is_in_progress and trip.trip_bags %}
+    <a href="/trips/{{ trip.id }}/checkin" class="btn btn-sm btn-primary">
+      <i class="bi bi-tag me-1"></i>{{ 'Update Check In' if active_checkin else 'Check In Bags' }}
+    </a>
+    {% if active_checkin %}
+    <a href="/trips/{{ trip.id }}/collect" class="btn btn-sm btn-success">
+      <i class="bi bi-bag-check me-1"></i>Collect Bags
+    </a>
+    {% endif %}
+    {% endif %}
     <a href="/trips/{{ trip.id }}/edit" class="btn btn-sm btn-outline-secondary">
       <i class="bi bi-pencil me-1"></i>Edit
     </a>
@@ -100,7 +110,7 @@
         {% endif %}
       </td>
       <td class="text-end">
-        <div class="d-flex gap-1 justify-content-end">
+        <div class="d-flex gap-1 justify-content-end flex-wrap">
           {% if f.is_cancelled %}
           <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/uncancel">
             <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1" title="Uncancel">
@@ -281,6 +291,47 @@
     <p class="text-muted small">
       <a href="/bags/new">Add a bag</a> to your collection first, then assign it here.
     </p>
+    {% endif %}
+
+    {% if trip.checkins %}
+    <div class="mt-4">
+      <h6 class="text-muted small text-uppercase fw-semibold mb-2">
+        <i class="bi bi-clock-history me-1"></i>Check-In History
+      </h6>
+      {% for ci in trip.checkins %}
+      {% set ci_checked = ci.bag_checkins | selectattr('status', 'equalto', 'checked_in') | list %}
+      {% set ci_carry = ci.bag_checkins | selectattr('status', 'equalto', 'carry_on') | list %}
+      {% set ci_all_collected = ci_checked | length > 0 and ci_checked | selectattr('collected_at') | list | length == ci_checked | length %}
+      <div class="card mb-2 {% if ci_all_collected %}border-success border-opacity-50{% endif %}">
+        <div class="card-body py-2 px-3">
+          <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div>
+              <span class="small fw-semibold">{{ ci.created_at.strftime('%d %b %Y %H:%M') }}</span>
+              <div class="d-flex flex-wrap gap-1 mt-1">
+                {% for bc in ci_checked %}
+                <span class="badge {% if bc.collected_at %}bg-success{% else %}bg-warning text-dark{% endif %}" style="font-size:.65rem">
+                  <i class="bi bi-tag me-1"></i>{{ bc.bag.name }}
+                  {% if bc.licence_plate_number %}<span class="font-monospace">· {{ bc.licence_plate_number }}</span>{% endif %}
+                  {% if bc.collected_at %}<i class="bi bi-check2 ms-1"></i>{% endif %}
+                </span>
+                {% endfor %}
+                {% for bc in ci_carry %}
+                <span class="badge bg-light text-dark border" style="font-size:.65rem">
+                  <i class="bi bi-person-walking me-1"></i>{{ bc.bag.name }}
+                </span>
+                {% endfor %}
+              </div>
+            </div>
+            {% if ci_all_collected %}
+            <span class="badge bg-success flex-shrink-0" style="font-size:.7rem">All collected</span>
+            {% elif ci_checked %}
+            <span class="badge bg-warning text-dark flex-shrink-0" style="font-size:.7rem">Awaiting collection</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
     {% endif %}
   </div>
 

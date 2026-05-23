@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Collect Bags — {{ trip.name }} — bagtag.aero{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/trips">Trips</a></li>
+    <li class="breadcrumb-item"><a href="/trips/{{ trip.id }}?tab=bags">{{ trip.name }}</a></li>
+    <li class="breadcrumb-item active">Collect Bags</li>
+  </ol>
+</nav>
+
+<h1 class="h4 mb-1"><i class="bi bi-bag-check-fill me-2 text-success"></i>Collect Bags</h1>
+<p class="text-muted mb-4">
+  Confirm which bags you collected at baggage reclaim. Tick each bag as you retrieve it.
+</p>
+
+<form method="post" action="/trips/{{ trip.id }}/collect">
+  <div class="row g-3 mb-4">
+    {% for bc in checked_in %}
+    {% set bag = bc.bag %}
+    <div class="col-12">
+      <div class="card {% if bc.collected_at %}border-success{% endif %}">
+        <div class="card-body py-2">
+          <div class="d-flex gap-3 align-items-center">
+
+            {% if bag.primary_image %}
+            <img src="/static/uploads/{{ bag.primary_image.filename }}"
+                 style="width:56px;height:56px;object-fit:cover;border-radius:.375rem;flex-shrink:0;"
+                 alt="{{ bag.name }}">
+            {% else %}
+            <div class="d-flex align-items-center justify-content-center bg-light flex-shrink-0"
+                 style="width:56px;height:56px;border-radius:.375rem;">
+              <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.25rem"></i>
+            </div>
+            {% endif %}
+
+            <div class="flex-grow-1">
+              <div class="fw-semibold">{{ bag.name }}</div>
+              {% if bc.licence_plate_number %}
+              <div class="text-muted small font-monospace">
+                <i class="bi bi-tag me-1"></i>{{ bc.licence_plate_number }}
+              </div>
+              {% endif %}
+              {% if bc.weight_kg %}
+              <div class="text-muted small">{{ bc.weight_kg }} kg</div>
+              {% endif %}
+            </div>
+
+            <div class="flex-shrink-0 d-flex align-items-center gap-2">
+              {% if bc.collected_at %}
+              <span class="badge bg-success">
+                <i class="bi bi-check2 me-1"></i>Collected {{ bc.collected_at.strftime('%H:%M') }}
+              </span>
+              <input type="hidden" name="collected_bag_id" value="{{ bag.id }}">
+              {% else %}
+              <div class="form-check form-check-reverse mb-0">
+                <input class="form-check-input" type="checkbox"
+                       name="collected_bag_id" value="{{ bag.id }}"
+                       id="collect_{{ bag.id }}">
+                <label class="form-check-label fw-medium" for="collect_{{ bag.id }}">
+                  Collected
+                </label>
+              </div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% set all_collected = checked_in | selectattr('collected_at') | list | length == checked_in | length %}
+  {% if not all_collected %}
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-bag-check me-1"></i>Confirm Collection
+    </button>
+    <a href="/trips/{{ trip.id }}?tab=bags" class="btn btn-outline-secondary">Back to Trip</a>
+  </div>
+  {% else %}
+  <div class="alert alert-success d-flex align-items-center gap-2">
+    <i class="bi bi-check-circle-fill fs-5"></i>
+    <div>All bags collected successfully.</div>
+  </div>
+  <a href="/trips/{{ trip.id }}?tab=bags" class="btn btn-outline-secondary">Back to Trip</a>
+  {% endif %}
+</form>
+{% endblock %}
