@@ -86,7 +86,7 @@ async def register(
             request=request,
             name="auth/register.html",
             context={"error": "Passwords do not match.", "username": username, "email": email},
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
     try:
         data = UserCreate(username=username, email=email, password=password)
@@ -95,7 +95,7 @@ async def register(
             request=request,
             name="auth/register.html",
             context={"error": str(exc), "username": username, "email": email},
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
     try:
         await auth_service.create_user(db, data)
