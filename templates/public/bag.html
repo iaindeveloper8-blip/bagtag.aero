@@ -20,6 +20,16 @@
     <a class="navbar-brand fw-bold" href="/">
       bagtag<span style="color:#0dcaf0">.</span>aero
     </a>
+    {% if is_owner %}
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#qr-modal">
+        <i class="bi bi-qr-code me-1"></i>QR Code
+      </button>
+      <a href="/bags/{{ bag.id }}" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+    </div>
+    {% endif %}
   </div>
 </nav>
 
@@ -208,7 +218,64 @@
   </p>
 </div>
 
+{% if is_owner %}
+<div class="modal fade" id="qr-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-qr-code me-2"></i>Bag QR Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div id="qr-canvas" class="d-inline-block mb-3"></div>
+        <p class="text-muted small mb-1">Scan to view this bag's public tracking page</p>
+        <p class="font-monospace small text-muted" id="qr-url"></p>
+        <a id="qr-download" class="btn btn-sm btn-outline-secondary mt-2" download="bagtag-{{ bag.id }}.png">
+          <i class="bi bi-download me-1"></i>Download PNG
+        </a>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <div class="text-muted small">Regenerate if this link is receiving spam.</div>
+        <form method="post" action="/bags/{{ bag.id }}/regenerate-token">
+          <button type="submit" class="btn btn-sm btn-outline-danger"
+                  data-confirm="Regenerate the public link? The old link will stop working immediately.">
+            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate link
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% if is_owner %}
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+  document.querySelectorAll('[data-confirm]').forEach(btn => {
+    btn.addEventListener('click', e => { if (!confirm(btn.dataset.confirm)) e.preventDefault(); });
+  });
+
+  document.getElementById('qr-modal').addEventListener('show.bs.modal', function () {
+    const container = document.getElementById('qr-canvas');
+    if (container.querySelector('canvas')) return;
+    const url = window.location.origin + window.location.pathname;
+    document.getElementById('qr-url').textContent = url;
+    new QRCode(container, {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+    setTimeout(() => {
+      const canvas = container.querySelector('canvas');
+      if (canvas) document.getElementById('qr-download').href = canvas.toDataURL('image/png');
+    }, 100);
+  });
+</script>
+{% endif %}
 <script>
   const shareBtn = document.getElementById('share-location-btn');
   const locationText = document.getElementById('location-text');
