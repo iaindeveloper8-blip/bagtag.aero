@@ -1,6 +1,8 @@
 # bagtag.aero
 
+[![CI](https://github.com/iaindeveloper8-blip/bagtag.aero/actions/workflows/ci.yml/badge.svg)](https://github.com/iaindeveloper8-blip/bagtag.aero/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/iaindeveloper8-blip/bagtag.aero/graph/badge.svg)](https://codecov.io/gh/iaindeveloper8-blip/bagtag.aero)
+[![Licence: CC0](https://img.shields.io/badge/Licence-CC0_1.0-lightgrey.svg)](LICENSE)
 
 Track your luggage and trips — know what you packed, where it went, and how to describe it at a lost-baggage desk.
 
