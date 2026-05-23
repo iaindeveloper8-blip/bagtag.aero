@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — bagtag.aero{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-0">Welcome back, {{ user.username }}!</h1>
+    <p class="text-muted mb-0">Manage your bags and plan your next adventure.</p>
+  </div>
+  <div class="ms-auto d-flex gap-2">
+    <a href="/bags/new" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Add Bag
+    </a>
+    <a href="/trips/new" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-airplane me-1"></i>New Trip
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-5 fw-bold text-primary">{{ bag_count }}</div>
+      <div class="text-muted small mt-1"><i class="bi bi-luggage-fill me-1"></i>Bags tracked</div>
+      <a href="/bags" class="stretched-link"></a>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-5 fw-bold text-success">{{ trip_count }}</div>
+      <div class="text-muted small mt-1"><i class="bi bi-airplane me-1"></i>Trips planned</div>
+      <a href="/trips" class="stretched-link"></a>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-5 fw-bold text-info">{{ upcoming_trips | length }}</div>
+      <div class="text-muted small mt-1"><i class="bi bi-calendar-event me-1"></i>Upcoming trips</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 bg-light">
+      <div class="display-5 fw-bold text-secondary"><i class="bi bi-list-check"></i></div>
+      <div class="text-muted small mt-1">Packing lists</div>
+      <a href="/packing/templates" class="stretched-link"></a>
+    </div>
+  </div>
+</div>
+
+<!-- Upcoming trips -->
+{% if upcoming_trips %}
+<h2 class="h5 mb-3"><i class="bi bi-calendar-check me-2 text-primary"></i>Upcoming Trips</h2>
+<div class="row g-3 mb-4">
+  {% for trip in upcoming_trips %}
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title mb-1">
+          <a href="/trips/{{ trip.id }}" class="text-decoration-none text-dark">{{ trip.name }}</a>
+        </h5>
+        {% if trip.departure_date %}
+        <p class="text-muted small mb-2">
+          <i class="bi bi-calendar3 me-1"></i>
+          {{ trip.departure_date.strftime('%d %b %Y') }}
+          {% if trip.return_date %} &rarr; {{ trip.return_date.strftime('%d %b %Y') }}{% endif %}
+        </p>
+        {% endif %}
+        {% if trip.flights %}
+        <div class="d-flex flex-wrap gap-1 mt-2">
+          {% for flight in trip.flights %}
+          <span class="badge bg-light text-dark border">
+            <i class="bi bi-airplane me-1"></i>{{ flight.departure_airport }} &rarr; {{ flight.arrival_airport }}
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-transparent border-0">
+        <a href="/trips/{{ trip.id }}" class="btn btn-sm btn-outline-primary w-100">View Trip</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card mb-4">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-airplane display-4 d-block mb-3 text-primary opacity-50"></i>
+    <h5>No upcoming trips</h5>
+    <p>Start planning your next adventure.</p>
+    <a href="/trips/new" class="btn btn-primary mt-2">
+      <i class="bi bi-plus-lg me-1"></i>Create a Trip
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Quick actions -->
+<h2 class="h5 mb-3"><i class="bi bi-lightning-charge me-2 text-warning"></i>Quick Actions</h2>
+<div class="row g-3">
+  <div class="col-6 col-md-3">
+    <a href="/bags/new" class="card text-decoration-none text-dark h-100">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-luggage-fill display-6 text-primary d-block mb-2"></i>
+        <div class="fw-medium">Add a Bag</div>
+        <div class="small text-muted">Register new luggage</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="/trips/new" class="card text-decoration-none text-dark h-100">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-airplane display-6 text-success d-block mb-2"></i>
+        <div class="fw-medium">Plan a Trip</div>
+        <div class="small text-muted">Add flights &amp; bags</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="/packing/templates" class="card text-decoration-none text-dark h-100">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-list-check display-6 text-info d-block mb-2"></i>
+        <div class="fw-medium">Packing Templates</div>
+        <div class="small text-muted">Browse &amp; customise lists</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="/bags" class="card text-decoration-none text-dark h-100">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-grid display-6 text-secondary d-block mb-2"></i>
+        <div class="fw-medium">My Bags</div>
+        <div class="small text-muted">View all luggage</div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}

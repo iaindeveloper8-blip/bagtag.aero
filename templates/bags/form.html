@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}{% if bag %}Edit {{ bag.name }}{% else %}Add Bag{% endif %} — bagtag.aero{% endblock %}
+
+{% macro sel(name, options, current, label, hint='') %}
+<div class="mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <select class="form-select" id="{{ name }}" name="{{ name }}">
+    <option value="">— select —</option>
+    {% for opt in options %}
+    <option value="{{ opt.value }}"
+      {% if current and current == opt.value %}selected{% endif %}>
+      {{ LABEL_MAP.get(opt.value, opt.value) }}
+    </option>
+    {% endfor %}
+  </select>
+  {% if hint %}<div class="form-text">{{ hint }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/bags">My Bags</a></li>
+    {% if bag %}
+    <li class="breadcrumb-item"><a href="/bags/{{ bag.id }}">{{ bag.name }}</a></li>
+    <li class="breadcrumb-item active">Edit</li>
+    {% else %}
+    <li class="breadcrumb-item active">Add Bag</li>
+    {% endif %}
+  </ol>
+</nav>
+
+<h1 class="h3 mb-4">
+  <i class="bi bi-luggage-fill me-2 text-primary"></i>
+  {% if bag %}Edit {{ bag.name }}{% else %}Add New Bag{% endif %}
+</h1>
+
+<form method="post" action="{% if bag %}/bags/{{ bag.id }}/edit{% else %}/bags/new{% endif %}">
+  <!-- Section 1: Basic Info -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i>Basic Information</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12">
+          <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="name" name="name"
+                 value="{{ bag.name if bag else '' }}" maxlength="200" required>
+          <div class="form-text">A memorable name for this bag, e.g. "Big Blue Samsonite"</div>
+        </div>
+        <div class="col-md-6">
+          <label for="brand" class="form-label">Brand / Make</label>
+          <input type="text" class="form-control" id="brand" name="brand"
+                 value="{{ bag.brand or '' }}" maxlength="100" placeholder="e.g. Samsonite">
+        </div>
+        <div class="col-md-6">
+          <label for="model" class="form-label">Model</label>
+          <input type="text" class="form-control" id="model" name="model"
+                 value="{{ bag.model or '' }}" maxlength="100" placeholder="e.g. Omni Max">
+        </div>
+        <div class="col-md-4">
+          <label for="purchased_at" class="form-label">Date purchased</label>
+          <input type="date" class="form-control" id="purchased_at" name="purchased_at"
+                 value="{{ bag.purchased_at.isoformat() if bag and bag.purchased_at else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label for="purchase_price" class="form-label">Purchase price (£)</label>
+          <input type="number" class="form-control" id="purchase_price" name="purchase_price"
+                 value="{{ bag.purchase_price or '' }}" min="0" step="0.01">
+        </div>
+        <div class="col-md-4">
+          <div class="row g-2">
+            <div class="col-6">
+              <label for="volume_liters" class="form-label">Volume (L)</label>
+              <input type="number" class="form-control" id="volume_liters" name="volume_liters"
+                     value="{{ bag.volume_liters or '' }}" min="0" step="0.1">
+            </div>
+            <div class="col-6">
+              <label for="tare_weight_kg" class="form-label">Tare (kg)</label>
+              <input type="number" class="form-control" id="tare_weight_kg" name="tare_weight_kg"
+                     value="{{ bag.tare_weight_kg or '' }}" min="0" step="0.01">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: IATA Identification -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold">
+      <i class="bi bi-tag me-1"></i>IATA Baggage Identification Chart
+      <span class="text-muted fw-normal small ms-2">Helps airline staff identify your bag</span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          {{ sel('bag_type', BagType, bag.bag_type if bag else None, 'Bag type') }}
+        </div>
+        <div class="col-md-4">
+          {{ sel('material', BagMaterial, bag.material if bag else None, 'Shell / material') }}
+        </div>
+        <div class="col-md-4">
+          {{ sel('size_category', SizeCategory, bag.size_category if bag else None, 'Size category') }}
+        </div>
+        <div class="col-md-6">
+          <label for="color_primary" class="form-label">Primary colour</label>
+          <input type="text" class="form-control" id="color_primary" name="color_primary"
+                 value="{{ bag.color_primary or '' }}" maxlength="50" placeholder="e.g. Black">
+        </div>
+        <div class="col-md-6">
+          <label for="color_secondary" class="form-label">Secondary colour</label>
+          <input type="text" class="form-control" id="color_secondary" name="color_secondary"
+                 value="{{ bag.color_secondary or '' }}" maxlength="50" placeholder="e.g. Silver (trim)">
+        </div>
+        <div class="col-md-4">
+          {{ sel('handle_type', HandleType, bag.handle_type if bag else None, 'Handle type') }}
+        </div>
+        <div class="col-md-4">
+          {{ sel('wheel_type', WheelType, bag.wheel_type if bag else None, 'Wheels') }}
+        </div>
+        <div class="col-md-4">
+          <label for="external_pockets" class="form-label">External pockets</label>
+          <input type="number" class="form-control" id="external_pockets" name="external_pockets"
+                 value="{{ bag.external_pockets or '' }}" min="0" step="1">
+        </div>
+        <div class="col-md-6">
+          {{ sel('closing_mechanism', ClosingMechanism, bag.closing_mechanism if bag else None, 'Closing mechanism') }}
+        </div>
+        <div class="col-md-6">
+          {{ sel('lock_type', LockType, bag.lock_type if bag else None, 'Lock type') }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Distinguishing Features -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-stars me-1"></i>Distinguishing Features</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="has_straps" name="has_straps"
+                   {% if bag and bag.has_straps %}checked{% endif %}>
+            <label class="form-check-label" for="has_straps">Has straps / ribbons</label>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <label for="strap_color" class="form-label">Strap colour / description</label>
+          <input type="text" class="form-control" id="strap_color" name="strap_color"
+                 value="{{ bag.strap_color or '' }}" maxlength="50">
+        </div>
+        <div class="col-md-4">
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="has_ribbons" name="has_ribbons"
+                   {% if bag and bag.has_ribbons %}checked{% endif %}>
+            <label class="form-check-label" for="has_ribbons">Has ribbon / ID tag</label>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <label for="ribbon_description" class="form-label">Ribbon / tag description</label>
+          <input type="text" class="form-control" id="ribbon_description" name="ribbon_description"
+                 value="{{ bag.ribbon_description or '' }}" maxlength="200">
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="has_name_tag" name="has_name_tag"
+                   {% if bag and bag.has_name_tag %}checked{% endif %}>
+            <label class="form-check-label" for="has_name_tag">Has a name / address tag attached</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <label for="distinguishing_marks" class="form-label">Other distinguishing marks</label>
+          <textarea class="form-control" id="distinguishing_marks" name="distinguishing_marks"
+                    rows="2" placeholder="Stickers, patches, personalisation…">{{ bag.distinguishing_marks or '' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Notes -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
+    <div class="card-body">
+      <textarea class="form-control" name="notes" rows="3"
+                placeholder="Anything else worth noting…">{{ bag.notes or '' }}</textarea>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>{% if bag %}Save Changes{% else %}Add Bag{% endif %}
+    </button>
+    <a href="{% if bag %}/bags/{{ bag.id }}{% else %}/bags{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+{% endblock %}

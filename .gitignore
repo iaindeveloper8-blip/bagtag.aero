@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+
+# Environment
+.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads
+static/uploads/
+
+# Build / dist
+dist/
+*.egg-info/
+
+# Claude Code
+.claude/
+
+# Editor
+.vscode/
+.idea/
+*.swp

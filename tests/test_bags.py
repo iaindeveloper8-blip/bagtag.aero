@@ -1,0 +1,230 @@
+"""Bag CRUD and image-upload endpoint tests."""
+
+import itertools
+
+from src.bags import service as bag_service
+from src.bags.schemas import BagCreate
+from tests.conftest import TINY_JPEG
+
+_bag_uid = itertools.count(200)
+
+
+def _bag_name():
+    return f"Test Bag {next(_bag_uid)}"
+
+
+# ── List / forms ─────────────────────────────────────────────────────────────
+
+
+async def test_list_bags_page_renders(auth_client):
+    resp = await auth_client.get("/bags/")
+    assert resp.status_code == 200
+    assert "My Bags" in resp.text
+
+
+async def test_new_bag_form_renders(auth_client):
+    resp = await auth_client.get("/bags/new")
+    assert resp.status_code == 200
+    assert "Add New Bag" in resp.text
+    assert "IATA" in resp.text
+
+
+# ── Create ───────────────────────────────────────────────────────────────────
+
+
+async def test_create_bag_minimal(auth_client):
+    name = _bag_name()
+    resp = await auth_client.post("/bags/new", data={"name": name}, follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/bags/" in resp.headers["location"]
+
+
+async def test_create_bag_all_iata_fields(auth_client):
+    name = _bag_name()
+    resp = await auth_client.post(
+        "/bags/new",
+        data={
+            "name": name,
+            "brand": "Samsonite",
+            "model": "Omni Max",
+            "volume_liters": "68",
+            "tare_weight_kg": "3.2",
+            "bag_type": "suitcase",
+            "material": "hard_polycarbonate",
+            "size_category": "checked_medium",
+            "color_primary": "Black",
+            "handle_type": "retractable_and_side",
+            "wheel_type": "four_wheel_spinner",
+            "closing_mechanism": "zipper_double",
+            "lock_type": "tsa_combination",
+            "has_straps": "on",
+            "strap_color": "Red",
+            "external_pockets": "2",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    loc = resp.headers["location"]
+    assert "/bags/" in loc
+
+
+async def test_create_bag_appears_in_list(auth_client):
+    name = _bag_name()
+    await auth_client.post("/bags/new", data={"name": name})
+    resp = await auth_client.get("/bags/")
+    assert name in resp.text
+
+
+# ── Detail ───────────────────────────────────────────────────────────────────
+
+
+async def test_bag_detail_renders(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name(), brand="Tumi"))
+    resp = await auth_client.get(f"/bags/{bag.id}")
+    assert resp.status_code == 200
+    assert bag.name in resp.text
+    assert "Tumi" in resp.text
+    assert "IATA Baggage Identification" in resp.text
+
+
+async def test_bag_detail_shows_iata_fields(auth_client, user, db):
+    bag = await bag_service.create_bag(
+        db,
+        user.id,
+        BagCreate(
+            name=_bag_name(),
+            material="hard_polycarbonate",
+            size_category="carry_on",
+            color_primary="Blue",
+        ),
+    )
+    resp = await auth_client.get(f"/bags/{bag.id}")
+    assert resp.status_code == 200
+    assert "Blue" in resp.text
+
+
+async def test_bag_not_found_returns_404(auth_client):
+    resp = await auth_client.get("/bags/999999")
+    assert resp.status_code == 404
+
+
+async def test_bag_other_user_returns_404(auth_client, db):
+    """Bag owned by a different user must not be visible."""
+    from itertools import count
+
+    from src.auth import service as auth_service
+    from src.auth.schemas import UserCreate
+
+    n = next(count(9000))
+    other = await auth_service.create_user(
+        db,
+        UserCreate(username=f"other{n}", email=f"other{n}@t.com", password="Password123!"),
+    )
+    other_bag = await bag_service.create_bag(db, other.id, BagCreate(name="Other user bag"))
+    resp = await auth_client.get(f"/bags/{other_bag.id}")
+    assert resp.status_code == 404
+
+
+# ── Edit ─────────────────────────────────────────────────────────────────────
+
+
+async def test_edit_bag_form_renders(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    resp = await auth_client.get(f"/bags/{bag.id}/edit")
+    assert resp.status_code == 200
+    assert bag.name in resp.text
+
+
+async def test_edit_bag_updates_fields(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    new_name = _bag_name()
+    resp = await auth_client.post(
+        f"/bags/{bag.id}/edit",
+        data={"name": new_name, "brand": "Away", "volume_liters": "40"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert str(bag.id) in resp.headers["location"]
+
+    detail = await auth_client.get(f"/bags/{bag.id}")
+    assert new_name in detail.text
+    assert "Away" in detail.text
+
+
+# ── Delete ───────────────────────────────────────────────────────────────────
+
+
+async def test_delete_bag(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    resp = await auth_client.post(f"/bags/{bag.id}/delete", follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/bags" in resp.headers["location"]
+
+    gone = await auth_client.get(f"/bags/{bag.id}")
+    assert gone.status_code == 404
+
+
+# ── Images ───────────────────────────────────────────────────────────────────
+
+
+async def test_upload_image(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    resp = await auth_client.post(
+        f"/bags/{bag.id}/images",
+        files={"file": ("photo.jpg", TINY_JPEG, "image/jpeg")},
+        data={"description": "Front view"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    # Image should appear on the detail page
+    detail = await auth_client.get(f"/bags/{bag.id}")
+    assert detail.status_code == 200
+
+
+async def test_upload_invalid_file_type(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    resp = await auth_client.post(
+        f"/bags/{bag.id}/images",
+        files={"file": ("doc.pdf", b"%PDF-1.4", "application/pdf")},
+        follow_redirects=False,
+    )
+    # Should reject with 4xx or redirect with error
+    assert resp.status_code in {302, 422}
+
+
+async def test_delete_image(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    image = await bag_service.add_image(db, bag, _fake_upload("img.jpg"), description=None)
+    resp = await auth_client.post(
+        f"/bags/{bag.id}/images/{image.id}/delete",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+
+
+async def test_set_primary_image(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    await bag_service.add_image(db, bag, _fake_upload("a.jpg"), description=None)
+    # Reload bag to get updated images list
+    bag = await bag_service.get_bag(db, bag.id, user.id)
+    img2 = await bag_service.add_image(db, bag, _fake_upload("b.jpg"), description=None)
+
+    resp = await auth_client.post(
+        f"/bags/{bag.id}/images/{img2.id}/set-primary",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+
+def _fake_upload(filename: str):
+    """Create a minimal UploadFile-like object for direct service calls."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock = MagicMock()
+    mock.filename = filename
+    mock.content_type = "image/jpeg"
+    mock.read = AsyncMock(return_value=TINY_JPEG)
+    return mock

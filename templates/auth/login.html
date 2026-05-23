@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Sign In — bagtag.aero{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-sm-10 col-md-6 col-lg-5 col-xl-4">
+    <div class="text-center mb-4">
+      <a href="/" class="text-decoration-none">
+        <h1 class="h2 fw-bold"><i class="bi bi-luggage me-1"></i>bagtag<span class="text-info">.</span>aero</h1>
+      </a>
+      <p class="text-muted">Track your luggage. Plan your trips.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-4">
+        <h2 class="card-title h5 mb-4">Sign in to your account</h2>
+
+        {% set login_success = request.query_params.get('success') %}
+        {% if login_success %}
+        <div class="alert alert-success small"><i class="bi bi-check-circle me-1"></i>{{ login_success | replace('+', ' ') }}</div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger small"><i class="bi bi-exclamation-triangle me-1"></i>{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/auth/login">
+          <input type="hidden" name="next" value="{{ next }}">
+          <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username" name="username"
+                   autocomplete="username" autofocus required>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password"
+                   autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Sign in
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <p class="text-center text-muted mt-3 small">
+      Don't have an account? <a href="/auth/register">Register</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}{{ template.name }} — bagtag.aero{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/packing/templates">Packing Templates</a></li>
+    <li class="breadcrumb-item active">{{ template.name }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex align-items-start mb-4 gap-3 flex-wrap">
+  <div class="flex-grow-1">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <h1 class="h3 mb-0">{{ template.name }}</h1>
+      {% if template.is_default %}
+      <span class="badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i>Default</span>
+      {% endif %}
+    </div>
+    {% if template.trip_type %}
+    <span class="badge bg-secondary mb-1">{{ TRIP_TYPE_LABELS.get(template.trip_type, template.trip_type) }}</span>
+    {% endif %}
+    {% if template.description %}
+    <p class="text-muted mb-0 mt-1">{{ template.description }}</p>
+    {% endif %}
+  </div>
+
+  <div class="d-flex gap-2 flex-shrink-0">
+    <form method="post" action="/packing/templates/{{ template.id }}/clone">
+      <button type="submit" class="btn btn-sm btn-warning">
+        <i class="bi bi-copy me-1"></i>Clone
+      </button>
+    </form>
+    {% if not template.is_default %}
+    <a href="/packing/templates/{{ template.id }}/edit" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <form method="post" action="/packing/templates/{{ template.id }}/delete">
+      <button type="submit" class="btn btn-sm btn-outline-danger"
+              data-confirm="Delete this template?">
+        <i class="bi bi-trash me-1"></i>Delete
+      </button>
+    </form>
+    {% else %}
+    <span class="text-muted small align-self-center">
+      <i class="bi bi-lock me-1"></i>Clone to edit
+    </span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-2 mb-4">
+  <div class="col-auto">
+    <span class="badge bg-light text-dark border fs-6 px-3 py-2">
+      <i class="bi bi-card-list me-1"></i>{{ template.items | length }} items
+    </span>
+  </div>
+  {% set affiliate_count = template.items | selectattr('affiliate_url') | list | length %}
+  {% if affiliate_count > 0 %}
+  <div class="col-auto">
+    <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+      <i class="bi bi-tag me-1"></i>{{ affiliate_count }} Amazon links
+    </span>
+  </div>
+  {% endif %}
+</div>
+
+{% if template.is_default and affiliate_count > 0 %}
+<div class="alert alert-warning alert-sm small mb-4" role="alert">
+  <i class="bi bi-info-circle me-1"></i>
+  Items marked with <span class="affiliate-badge">amazon</span> include affiliate links.
+  When you clone this template, those links carry over to help support bagtag.aero.
+</div>
+{% endif %}
+
+<!-- Items grouped by category -->
+{% if template.items %}
+{% set categories = template.items | map(attribute='category') | unique | sort | list %}
+{% for cat in categories %}
+{% set cat_items = template.items | selectattr('category', 'equalto', cat) | list %}
+<div class="card mb-3">
+  <div class="card-header bg-light py-2 d-flex align-items-center gap-2">
+    <span class="fw-semibold small text-uppercase text-muted">{{ cat | replace('_', ' ') | title }}</span>
+    <span class="badge bg-secondary" style="font-size:.65rem">{{ cat_items | length }}</span>
+  </div>
+  <ul class="list-group list-group-flush">
+    {% for item in cat_items %}
+    <li class="list-group-item py-2">
+      <div class="d-flex align-items-center">
+        <div class="flex-grow-1">
+          <span class="fw-medium">{{ item.name }}</span>
+          {% if item.quantity > 1 %}
+          <span class="badge bg-light text-dark border ms-1" style="font-size:.7rem">×{{ item.quantity }}</span>
+          {% endif %}
+          {% if item.notes %}<br><span class="text-muted small">{{ item.notes }}</span>{% endif %}
+          {% if item.affiliate_url %}
+          <a href="{{ item.affiliate_url }}" target="_blank" rel="noopener sponsored"
+             class="affiliate-badge ms-2">amazon</a>
+          {% endif %}
+        </div>
+        {% if not template.is_default %}
+        <form method="post" action="/packing/templates/{{ template.id }}/items/{{ item.id }}/delete">
+          <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"
+                  data-confirm="Remove '{{ item.name }}'?">&times;</button>
+        </form>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endfor %}
+{% else %}
+<p class="text-muted">No items in this template yet.</p>
+{% endif %}
+
+<!-- Add item form (user templates only) -->
+{% if not template.is_default %}
+<div class="card mt-4">
+  <div class="card-header bg-light small fw-semibold"><i class="bi bi-plus-lg me-1"></i>Add Item</div>
+  <div class="card-body">
+    <form method="post" action="/packing/templates/{{ template.id }}/items">
+      <div class="row g-2">
+        <div class="col-md-5">
+          <input type="text" class="form-control form-control-sm" name="name"
+                 placeholder="Item name" required maxlength="200" autofocus>
+        </div>
+        <div class="col-md-3">
+          <select class="form-select form-select-sm" name="category">
+            {% for cat in ItemCategory %}
+            <option value="{{ cat.value }}">{{ CATEGORY_LABELS.get(cat.value, cat.value) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <input type="number" class="form-control form-control-sm" name="quantity"
+                 value="1" min="1" max="99" placeholder="Qty">
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+        </div>
+        <div class="col-12">
+          <input type="text" class="form-control form-control-sm" name="notes"
+                 placeholder="Notes (optional)" maxlength="500">
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

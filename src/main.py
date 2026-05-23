@@ -1,0 +1,104 @@
+from contextlib import asynccontextmanager
+from typing import Annotated
+from urllib.parse import quote
+
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+# Ensure all models are registered with Base.metadata before create_all
+import src.auth.models  # noqa: F401, E402
+import src.bags.models  # noqa: F401, E402
+import src.packing.models  # noqa: F401, E402
+import src.trips.models  # noqa: F401, E402
+from src.auth import router as auth_router
+from src.auth.dependencies import CurrentUser
+from src.bags import router as bags_router
+from src.bags.models import Bag
+from src.config import settings
+from src.database import Base, SessionFactory, engine, get_db
+from src.exceptions import RedirectToLogin
+from src.packing import router as packing_router
+from src.trips import router as trips_router
+from src.trips.models import Trip
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with SessionFactory() as db:
+        from src.packing.seed import seed_default_templates
+
+        await seed_default_templates(db)
+
+    yield
+
+    await engine.dispose()
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="Track your luggage and trips — bagtag.aero",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url="/api/docs" if settings.ENVIRONMENT in {"local", "staging"} else None,
+    redoc_url=None,
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.include_router(auth_router.router, prefix="/auth")
+app.include_router(bags_router.router, prefix="/bags")
+app.include_router(trips_router.router, prefix="/trips")
+app.include_router(packing_router.router, prefix="/packing")
+
+
+@app.exception_handler(RedirectToLogin)
+async def redirect_to_login_handler(request: Request, exc: RedirectToLogin):
+    return RedirectResponse(
+        url=f"/auth/login?next={quote(exc.next_url, safe='')}",
+        status_code=302,
+    )
+
+
+templates = Jinja2Templates(directory="templates")
+
+
+@app.get("/")
+async def dashboard(
+    request: Request,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from datetime import date
+
+    bag_count = (await db.execute(select(func.count()).where(Bag.user_id == user.id))).scalar()
+    trip_count = (await db.execute(select(func.count()).where(Trip.user_id == user.id))).scalar()
+
+    upcoming_result = await db.execute(
+        select(Trip)
+        .where(Trip.user_id == user.id, Trip.departure_date >= date.today())
+        .options(selectinload(Trip.flights))
+        .order_by(Trip.departure_date.asc())
+        .limit(3)
+    )
+    upcoming_trips = list(upcoming_result.scalars().all())
+
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "user": user,
+            "bag_count": bag_count,
+            "trip_count": trip_count,
+            "upcoming_trips": upcoming_trips,
+        },
+    )
