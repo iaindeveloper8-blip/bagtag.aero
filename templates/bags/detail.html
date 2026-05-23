@@ -284,18 +284,21 @@
           <!-- Resolve form (only for unresolved) -->
           {% if not inc.resolution %}
           <div class="d-flex gap-2 mt-2 flex-wrap">
+            {% if inc.collection_outcome == 'missing' %}
             <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
               <input type="hidden" name="resolution" value="returned">
               <button type="submit" class="btn btn-sm btn-outline-success">
                 <i class="bi bi-bag-check me-1"></i>Mark as Returned
               </button>
             </form>
+            {% elif inc.collection_outcome == 'damaged' %}
             <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
               <input type="hidden" name="resolution" value="repaired">
               <button type="submit" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-tools me-1"></i>Mark as Repaired
               </button>
             </form>
+            {% endif %}
           </div>
           {% else %}
           <div class="text-muted small mt-1">
