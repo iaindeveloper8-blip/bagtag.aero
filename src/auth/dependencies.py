@@ -12,14 +12,14 @@ from src.exceptions import RedirectToLogin
 
 async def require_auth(
     request: Request,
-    token: Annotated[str | None, Cookie(alias="access_token")] = None,
+    access_token: Annotated[str | None, Cookie(alias="access_token")] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ) -> User:
     """Dependency for HTML routes — redirects to login on failure."""
-    if not token:
+    if not access_token:
         raise RedirectToLogin(next_url=str(request.url.path))
     try:
-        payload = auth_service.decode_access_token(token)
+        payload = auth_service.decode_access_token(access_token)
         user_id = int(payload["sub"])
         user = await auth_service.get_user_by_id(db, user_id)
         if not user or not user.is_active:
@@ -33,14 +33,14 @@ CurrentUser = Annotated[User, Depends(require_auth)]
 
 
 async def optional_auth(
-    token: Annotated[str | None, Cookie(alias="access_token")] = None,
+    access_token: Annotated[str | None, Cookie(alias="access_token")] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ) -> User | None:
     """Dependency for routes accessible to both guests and logged-in users."""
-    if not token:
+    if not access_token:
         return None
     try:
-        payload = auth_service.decode_access_token(token)
+        payload = auth_service.decode_access_token(access_token)
         user_id = int(payload["sub"])
         user = await auth_service.get_user_by_id(db, user_id)
         return user if user and user.is_active else None

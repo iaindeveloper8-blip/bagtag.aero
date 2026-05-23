@@ -18,7 +18,7 @@
 <nav class="navbar navbar-dark bg-dark">
   <div class="container">
     <a class="navbar-brand fw-bold" href="/">
-      <i class="bi bi-luggage me-1"></i>bagtag<span style="color:#0dcaf0">.</span>aero
+      bagtag<span style="color:#0dcaf0">.</span>aero
     </a>
   </div>
 </nav>
@@ -122,19 +122,28 @@
       <i class="bi bi-chat-left-text me-1"></i>Leave an Update
     </div>
     <div class="card-body">
+      {% if is_owner %}
+      <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
+        <i class="bi bi-patch-check-fill"></i>
+        <span>You are posting as <strong>Verified Owner</strong>.</span>
+      </div>
+      {% else %}
       <p class="text-muted small mb-3">
         Found this bag? Let the owner know where it is by leaving an update below.
         Your location can be shared automatically if you allow it.
       </p>
-      <form method="post" action="/b/{{ bag.id }}/updates" id="update-form">
+      {% endif %}
+      <form method="post" action="/b/{{ bag.public_token }}/updates" id="update-form">
         <input type="hidden" name="latitude" id="lat-input">
         <input type="hidden" name="longitude" id="lng-input">
 
+        {% if not is_owner %}
         <div class="mb-3">
           <label class="form-label fw-semibold" for="finder_name">Your name <span class="text-danger">*</span></label>
           <input type="text" class="form-control" id="finder_name" name="finder_name"
                  placeholder="e.g. Jane Smith" maxlength="200" required>
         </div>
+        {% endif %}
 
         <div class="mb-3">
           <label class="form-label fw-semibold" for="comment">Message <span class="text-danger">*</span></label>
@@ -170,7 +179,14 @@
       <li class="list-group-item">
         <div class="d-flex justify-content-between align-items-start">
           <div>
-            <div class="fw-semibold">{{ upd.finder_name }}</div>
+            <div class="fw-semibold d-flex align-items-center gap-2">
+              {{ upd.finder_name }}
+              {% if upd.finder_name == "Verified Owner" %}
+              <span class="badge bg-success" style="font-size:.65rem">
+                <i class="bi bi-patch-check-fill me-1"></i>Verified Owner
+              </span>
+              {% endif %}
+            </div>
             <div class="small">{{ upd.comment }}</div>
             {% if upd.latitude is not none and upd.longitude is not none %}
             <a href="https://www.openstreetmap.org/?mlat={{ upd.latitude }}&mlon={{ upd.longitude }}&zoom=14"

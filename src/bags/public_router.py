@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.auth.dependencies import OptionalUser
 from src.bags import service as bag_service
 from src.bags.constants import LABEL_MAP
 from src.bags.exceptions import BagNotFound
@@ -20,6 +21,7 @@ templates = Jinja2Templates(directory="templates")
 async def public_bag(
     request: Request,
     token: str,
+    current_user: OptionalUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
@@ -32,19 +34,21 @@ async def public_bag(
             context={},
         )
     flights = await bag_service.get_relevant_flights(db, bag.id)
+    is_owner = current_user is not None and current_user.id == bag.user_id
     return templates.TemplateResponse(
         request=request,
         name="public/bag.html",
-        context={"bag": bag, "flights": flights, "LABEL_MAP": LABEL_MAP},
+        context={"bag": bag, "flights": flights, "LABEL_MAP": LABEL_MAP, "is_owner": is_owner},
     )
 
 
 @router.post("/{token}/updates")
 async def submit_bag_update(
     token: str,
+    current_user: OptionalUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    finder_name: Annotated[str, Form()],
     comment: Annotated[str, Form()],
+    finder_name: Annotated[str | None, Form()] = None,
     latitude: Annotated[str | None, Form()] = None,
     longitude: Annotated[str | None, Form()] = None,
 ):
@@ -53,8 +57,16 @@ async def submit_bag_update(
     except BagNotFound:
         return RedirectResponse(url=f"/b/{token}", status_code=status.HTTP_302_FOUND)
 
+    is_owner = current_user is not None and current_user.id == bag.user_id
+    resolved_name = "Verified Owner" if is_owner else (finder_name or "").strip()
+    if not resolved_name:
+        return RedirectResponse(
+            url=f"/b/{token}?error=Please+provide+your+name",
+            status_code=status.HTTP_302_FOUND,
+        )
+
     data = BagUpdateCreate(
-        finder_name=finder_name.strip(),
+        finder_name=resolved_name,
         comment=comment.strip(),
         latitude=float(latitude) if latitude and latitude.strip() else None,
         longitude=float(longitude) if longitude and longitude.strip() else None,
@@ -66,7 +78,7 @@ async def submit_bag_update(
         location_str = " (location shared)"
 
     message = (
-        f'{finder_name} left an update on your bag "{bag.name}"{location_str}: '
+        f'{resolved_name} left an update on your bag "{bag.name}"{location_str}: '
         f"{comment[:100]}{'…' if len(comment) > 100 else ''}"
     )
     await notification_service.create_notification(
