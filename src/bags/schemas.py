@@ -17,19 +17,13 @@ class BagCreate(BaseModel):
     # IATA Baggage Identification Chart
     color: BagColor | None = None
     bag_type: BagType | None = None
-    material: BagMaterial | None = None     # None = soft (IATA default)
-    is_cabin_size: bool = False             # K
-    has_combination_lock: bool = False      # C
-    has_retractable_handle: bool = False    # H
-    has_closing_straps: bool = False        # S
-    has_wheels: bool = False                # W
+    material: BagMaterial | None = None  # None = soft (IATA default)
+    is_cabin_size: bool = False  # K
+    has_combination_lock: bool = False  # C
+    has_retractable_handle: bool = False  # H
+    has_closing_straps: bool = False  # S
+    has_wheels: bool = False  # W
 
-    # Distinguishing features (not part of the IATA code)
-    has_ribbons: bool = False
-    ribbon_description: str | None = Field(default=None, max_length=200)
-    has_name_tag: bool = False
-    external_pockets: int | None = Field(default=None, ge=0)
-    distinguishing_marks: str | None = None
     notes: str | None = None
 
 

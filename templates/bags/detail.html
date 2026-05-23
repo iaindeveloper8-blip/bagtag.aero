@@ -165,32 +165,6 @@
         </div>
         {% endif %}
 
-        <!-- Distinguishing features -->
-        {% set has_features = bag.has_ribbons or bag.has_name_tag %}
-        {% if has_features %}
-        <hr class="my-2">
-        <div class="d-flex flex-wrap gap-2">
-          {% if bag.has_ribbons %}
-          <span class="badge bg-light text-dark border">
-            <i class="bi bi-tags me-1"></i>Ribbons
-            {% if bag.ribbon_description %}: {{ bag.ribbon_description }}{% endif %}
-          </span>
-          {% endif %}
-          {% if bag.has_name_tag %}
-          <span class="badge bg-light text-dark border"><i class="bi bi-person-badge me-1"></i>Name tag</span>
-          {% endif %}
-        </div>
-        {% endif %}
-
-        {% if bag.external_pockets %}
-        <hr class="my-2">
-        <p class="mb-0 small"><strong>External pockets:</strong> {{ bag.external_pockets }}</p>
-        {% endif %}
-
-        {% if bag.distinguishing_marks %}
-        <hr class="my-2">
-        <p class="mb-0 small"><strong>Distinguishing marks:</strong> {{ bag.distinguishing_marks }}</p>
-        {% endif %}
       </div>
     </div>
 

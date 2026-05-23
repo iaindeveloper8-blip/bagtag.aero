@@ -38,7 +38,7 @@ async def list_bags(
     return templates.TemplateResponse(
         request=request,
         name="bags/index.html",
-        context={"bags": bags, "user": user},
+        context={"bags": bags, "user": user, **_ENUM_CONTEXT},
     )
 
 
@@ -71,11 +71,6 @@ async def create_bag(
     has_retractable_handle: Annotated[str | None, Form()] = None,
     has_closing_straps: Annotated[str | None, Form()] = None,
     has_wheels: Annotated[str | None, Form()] = None,
-    has_ribbons: Annotated[str | None, Form()] = None,
-    ribbon_description: Annotated[str | None, Form()] = None,
-    has_name_tag: Annotated[str | None, Form()] = None,
-    external_pockets: Annotated[str | None, Form()] = None,
-    distinguishing_marks: Annotated[str | None, Form()] = None,
     notes: Annotated[str | None, Form()] = None,
 ):
     data = BagCreate(
@@ -94,11 +89,6 @@ async def create_bag(
         has_retractable_handle=has_retractable_handle == "on",
         has_closing_straps=has_closing_straps == "on",
         has_wheels=has_wheels == "on",
-        has_ribbons=has_ribbons == "on",
-        ribbon_description=ribbon_description or None,
-        has_name_tag=has_name_tag == "on",
-        external_pockets=_parse_int(external_pockets),
-        distinguishing_marks=distinguishing_marks or None,
         notes=notes or None,
     )
     bag = await bag_service.create_bag(db, user.id, data)
@@ -145,11 +135,6 @@ async def update_bag(
     has_retractable_handle: Annotated[str | None, Form()] = None,
     has_closing_straps: Annotated[str | None, Form()] = None,
     has_wheels: Annotated[str | None, Form()] = None,
-    has_ribbons: Annotated[str | None, Form()] = None,
-    ribbon_description: Annotated[str | None, Form()] = None,
-    has_name_tag: Annotated[str | None, Form()] = None,
-    external_pockets: Annotated[str | None, Form()] = None,
-    distinguishing_marks: Annotated[str | None, Form()] = None,
     notes: Annotated[str | None, Form()] = None,
 ):
     data = BagUpdate(
@@ -168,11 +153,6 @@ async def update_bag(
         has_retractable_handle=has_retractable_handle == "on",
         has_closing_straps=has_closing_straps == "on",
         has_wheels=has_wheels == "on",
-        has_ribbons=has_ribbons == "on",
-        ribbon_description=ribbon_description or None,
-        has_name_tag=has_name_tag == "on",
-        external_pockets=_parse_int(external_pockets),
-        distinguishing_marks=distinguishing_marks or None,
         notes=notes or None,
     )
     await bag_service.update_bag(db, bag, data)
@@ -241,15 +221,9 @@ def _parse_float(v: str | None) -> float | None:
         return None
 
 
-def _parse_int(v: str | None) -> int | None:
-    try:
-        return int(v) if v and v.strip() else None
-    except ValueError:
-        return None
-
-
 def _parse_date(v: str | None):
     from datetime import date as _date
+
     try:
         return _date.fromisoformat(v) if v and v.strip() else None
     except ValueError:

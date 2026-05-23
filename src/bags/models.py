@@ -22,21 +22,15 @@ class Bag(Base):
     tare_weight_kg: Mapped[float | None] = mapped_column(Float)
 
     # IATA Baggage Identification Chart fields
-    color: Mapped[str | None] = mapped_column(String(2))       # BagColor code, e.g. "BK"
-    bag_type: Mapped[str | None] = mapped_column(String(2))    # BagType code, e.g. "25"
-    material: Mapped[str | None] = mapped_column(String(1))    # BagMaterial code; None = soft
-    is_cabin_size: Mapped[bool] = mapped_column(Boolean, default=False)       # K
+    color: Mapped[str | None] = mapped_column(String(2))  # BagColor code, e.g. "BK"
+    bag_type: Mapped[str | None] = mapped_column(String(2))  # BagType code, e.g. "25"
+    material: Mapped[str | None] = mapped_column(String(1))  # BagMaterial code; None = soft
+    is_cabin_size: Mapped[bool] = mapped_column(Boolean, default=False)  # K
     has_combination_lock: Mapped[bool] = mapped_column(Boolean, default=False)  # C
     has_retractable_handle: Mapped[bool] = mapped_column(Boolean, default=False)  # H
     has_closing_straps: Mapped[bool] = mapped_column(Boolean, default=False)  # S
-    has_wheels: Mapped[bool] = mapped_column(Boolean, default=False)          # W
+    has_wheels: Mapped[bool] = mapped_column(Boolean, default=False)  # W
 
-    # Distinguishing features (not part of the IATA code)
-    has_ribbons: Mapped[bool] = mapped_column(Boolean, default=False)
-    ribbon_description: Mapped[str | None] = mapped_column(String(200))
-    has_name_tag: Mapped[bool] = mapped_column(Boolean, default=False)
-    external_pockets: Mapped[int | None] = mapped_column(Integer)
-    distinguishing_marks: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(

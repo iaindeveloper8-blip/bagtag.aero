@@ -41,6 +41,7 @@ class BagType(StrEnum):
 
 class BagMaterial(StrEnum):
     """Material modifier letter; absent from the code means soft (IATA default)."""
+
     DUAL = "D"
     LEATHER = "L"
     METAL = "M"

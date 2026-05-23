@@ -193,45 +193,7 @@
     </div>
   </div>
 
-  <!-- Section 3: Distinguishing Features -->
-  <div class="card mb-4">
-    <div class="card-header fw-semibold"><i class="bi bi-stars me-1"></i>Distinguishing Features</div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="has_ribbons" name="has_ribbons"
-                   {% if bag and bag.has_ribbons %}checked{% endif %}>
-            <label class="form-check-label" for="has_ribbons">Has ribbon / ID tag</label>
-          </div>
-        </div>
-        <div class="col-md-8">
-          <label for="ribbon_description" class="form-label">Ribbon / tag description</label>
-          <input type="text" class="form-control" id="ribbon_description" name="ribbon_description"
-                 value="{{ bag.ribbon_description or '' }}" maxlength="200">
-        </div>
-        <div class="col-md-4">
-          <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="has_name_tag" name="has_name_tag"
-                   {% if bag and bag.has_name_tag %}checked{% endif %}>
-            <label class="form-check-label" for="has_name_tag">Has a name / address tag attached</label>
-          </div>
-        </div>
-        <div class="col-md-8">
-          <label for="external_pockets" class="form-label">External pockets</label>
-          <input type="number" class="form-control" id="external_pockets" name="external_pockets"
-                 value="{{ bag.external_pockets or '' }}" min="0" step="1">
-        </div>
-        <div class="col-12">
-          <label for="distinguishing_marks" class="form-label">Other distinguishing marks</label>
-          <textarea class="form-control" id="distinguishing_marks" name="distinguishing_marks"
-                    rows="2" placeholder="Stickers, patches, personalisation…">{{ bag.distinguishing_marks or '' }}</textarea>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section 4: Notes -->
+  <!-- Section 3: Notes -->
   <div class="card mb-4">
     <div class="card-header fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
     <div class="card-body">
