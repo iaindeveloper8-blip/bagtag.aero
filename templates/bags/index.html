@@ -27,8 +27,18 @@
       </div>
       {% endif %}
       <div class="card-body">
-        <h5 class="card-title mb-1">
+        <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
           <a href="/bags/{{ bag.id }}" class="text-decoration-none text-dark stretched-link">{{ bag.name }}</a>
+          {% set outcome = incident_status.get(bag.id) %}
+          {% if outcome == 'missing' %}
+          <span class="badge bg-danger" style="font-size:.65rem;position:relative;z-index:1">
+            <i class="bi bi-question-circle me-1"></i>Missing
+          </span>
+          {% elif outcome == 'damaged' %}
+          <span class="badge bg-danger" style="font-size:.65rem;position:relative;z-index:1">
+            <i class="bi bi-exclamation-triangle me-1"></i>Damaged
+          </span>
+          {% endif %}
         </h5>
         {% if bag.brand or bag.model %}
         <p class="text-muted small mb-2">{{ bag.brand or '' }}{% if bag.brand and bag.model %} &mdash; {% endif %}{{ bag.model or '' }}</p>

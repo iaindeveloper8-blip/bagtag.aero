@@ -371,6 +371,24 @@ async def save_pir_receipt(
     await db.commit()
 
 
+async def get_unresolved_incident_status(db: AsyncSession, user_id: int) -> dict[int, str]:
+    """Return {bag_id: outcome} for all unresolved damage/loss incidents for a user."""
+    result = await db.execute(
+        select(TripCheckinBag.bag_id, TripCheckinBag.collection_outcome)
+        .join(Bag, Bag.id == TripCheckinBag.bag_id)
+        .where(
+            Bag.user_id == user_id,
+            TripCheckinBag.collection_outcome.in_(["damaged", "missing"]),
+            TripCheckinBag.resolution.is_(None),
+        )
+    )
+    status: dict[int, str] = {}
+    for bag_id, outcome in result.all():
+        if bag_id not in status or outcome == "missing":
+            status[bag_id] = outcome
+    return status
+
+
 async def get_bag_incidents(db: AsyncSession, bag_id: int) -> list[TripCheckinBag]:
     result = await db.execute(
         select(TripCheckinBag)

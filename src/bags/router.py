@@ -36,10 +36,11 @@ async def list_bags(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     bags = await bag_service.get_bags(db, user.id)
+    incident_status = await trip_service.get_unresolved_incident_status(db, user.id)
     return templates.TemplateResponse(
         request=request,
         name="bags/index.html",
-        context={"bags": bags, "user": user, **_ENUM_CONTEXT},
+        context={"bags": bags, "user": user, "incident_status": incident_status, **_ENUM_CONTEXT},
     )
 
 
