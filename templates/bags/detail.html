@@ -11,7 +11,17 @@
 
 <div class="d-flex align-items-start mb-4 gap-3">
   <div class="flex-grow-1">
-    <h1 class="h3 mb-0">{{ bag.name }}</h1>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <h1 class="h3 mb-0">{{ bag.name }}</h1>
+      {% set unresolved_incidents = incidents | rejectattr('resolution') | list if incidents else [] %}
+      {% if unresolved_incidents %}
+        {% set has_missing = unresolved_incidents | selectattr('collection_outcome', 'equalto', 'missing') | list %}
+        <span class="badge bg-danger fs-6">
+          <i class="bi bi-{% if has_missing %}question-circle{% else %}exclamation-triangle{% endif %} me-1"></i>
+          {% if has_missing %}Missing{% else %}Damaged{% endif %}
+        </span>
+      {% endif %}
+    </div>
     {% if bag.brand or bag.model %}
     <p class="text-muted mb-1">{{ bag.brand or '' }}{% if bag.brand and bag.model %} &mdash; {% endif %}{{ bag.model or '' }}</p>
     {% endif %}
@@ -196,6 +206,105 @@
     <div class="card mb-3">
       <div class="card-header bg-light small fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
       <div class="card-body small" style="white-space:pre-wrap">{{ bag.notes }}</div>
+    </div>
+    {% endif %}
+
+    {% if incidents %}
+    {% set unresolved = incidents | rejectattr('resolution') | list %}
+    <div class="card mb-3 {% if unresolved %}border-danger{% endif %}">
+      <div class="card-header bg-light small fw-semibold d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-exclamation-triangle me-1 text-danger"></i>Damage &amp; Loss History</span>
+        {% if unresolved %}
+        <span class="badge bg-danger">{{ unresolved | length }} open</span>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% for inc in incidents %}
+        {% set trip = inc.checkin.trip %}
+        <div class="p-3 {% if not loop.last %}border-bottom{% endif %}">
+          <!-- Trip context -->
+          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
+            <div>
+              <a href="/trips/{{ trip.id }}?tab=bags" class="fw-semibold text-decoration-none">
+                {{ trip.name }}
+              </a>
+              {% if trip.departure_date %}
+              <span class="text-muted small ms-1">{{ trip.departure_date.strftime('%b %Y') }}</span>
+              {% endif %}
+            </div>
+            <div class="d-flex gap-1 flex-wrap">
+              {% if inc.collection_outcome == 'damaged' %}
+              <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Damaged</span>
+              {% else %}
+              <span class="badge bg-danger"><i class="bi bi-question-circle me-1"></i>Missing</span>
+              {% endif %}
+              {% if inc.resolution == 'returned' %}
+              <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Returned</span>
+              {% elif inc.resolution == 'repaired' %}
+              <span class="badge bg-success"><i class="bi bi-tools me-1"></i>Repaired</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- PIR details -->
+          {% if inc.licence_plate_number or inc.pir_reference or inc.pir_receipt_filename %}
+          <dl class="row mb-2" style="font-size:.85rem">
+            {% if inc.licence_plate_number %}
+            <dt class="col-sm-4 text-muted fw-normal">Licence plate</dt>
+            <dd class="col-sm-8 font-monospace">{{ inc.licence_plate_number }}</dd>
+            {% endif %}
+            {% if inc.pir_reference %}
+            <dt class="col-sm-4 text-muted fw-normal">PIR reference</dt>
+            <dd class="col-sm-8 font-monospace">{{ inc.pir_reference }}</dd>
+            {% endif %}
+            {% if inc.pir_receipt_filename %}
+            <dt class="col-sm-4 text-muted fw-normal">PIR receipt</dt>
+            <dd class="col-sm-8">
+              <a href="/static/uploads/{{ inc.pir_receipt_filename }}" target="_blank" rel="noopener">
+                <i class="bi bi-paperclip me-1"></i>View
+              </a>
+            </dd>
+            {% endif %}
+          </dl>
+          {% endif %}
+
+          <!-- Damage photos -->
+          {% if inc.damage_photos %}
+          <div class="d-flex flex-wrap gap-1 mb-2">
+            {% for photo in inc.damage_photos %}
+            <a href="/static/uploads/{{ photo.filename }}" target="_blank" rel="noopener">
+              <img src="/static/uploads/{{ photo.filename }}"
+                   style="width:56px;height:56px;object-fit:cover;border-radius:.375rem;"
+                   alt="Damage photo">
+            </a>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Resolve form (only for unresolved) -->
+          {% if not inc.resolution %}
+          <div class="d-flex gap-2 mt-2 flex-wrap">
+            <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
+              <input type="hidden" name="resolution" value="returned">
+              <button type="submit" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-bag-check me-1"></i>Mark as Returned
+              </button>
+            </form>
+            <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
+              <input type="hidden" name="resolution" value="repaired">
+              <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-tools me-1"></i>Mark as Repaired
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <div class="text-muted small mt-1">
+            Resolved {{ inc.resolved_at.strftime('%d %b %Y') if inc.resolved_at else '' }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
     </div>
     {% endif %}
   </div>

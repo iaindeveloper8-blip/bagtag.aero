@@ -443,8 +443,8 @@ async def save_collect(
 
     for bag_id, data in outcome_data.items():
         if data["outcome"] == "damaged":
-            damage_files = form.getlist(f"damage_photos_{bag_id}")
-            valid_files = [f for f in damage_files if hasattr(f, "filename") and f.filename]
+            damage_files = [form.get(f"damage_photo_{bag_id}_{i}") for i in range(1, 7)]
+            valid_files = [f for f in damage_files if f and hasattr(f, "filename") and f.filename]
             if valid_files:
                 await trip_service.save_damage_photos(db, active_checkin.id, bag_id, valid_files)
         if data["outcome"] in ("damaged", "missing"):

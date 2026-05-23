@@ -140,6 +140,9 @@ class TripCheckinBag(Base):
     collection_outcome: Mapped[str | None] = mapped_column(String(20))
     pir_reference: Mapped[str | None] = mapped_column(String(50))
     pir_receipt_filename: Mapped[str | None] = mapped_column(String(200))
+    # "returned" | "repaired" — set once the incident is closed
+    resolution: Mapped[str | None] = mapped_column(String(20))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime)
 
     checkin: Mapped["TripCheckin"] = relationship("TripCheckin", back_populates="bag_checkins")
     bag: Mapped["Bag"] = relationship("Bag")  # type: ignore[name-defined]  # noqa: F821

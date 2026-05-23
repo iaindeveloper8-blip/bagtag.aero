@@ -16,6 +16,7 @@ from src.bags.constants import (
 from src.bags.dependencies import OwnedBag
 from src.bags.schemas import BagCreate, BagUpdate
 from src.database import get_db
+from src.trips import service as trip_service
 
 router = APIRouter(tags=["bags"])
 templates = Jinja2Templates(directory="templates")
@@ -102,11 +103,31 @@ async def create_bag(
 
 
 @router.get("/{bag_id}", response_class=HTMLResponse)
-async def bag_detail(request: Request, bag: OwnedBag, user: CurrentUser):
+async def bag_detail(
+    request: Request,
+    bag: OwnedBag,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    incidents = await trip_service.get_bag_incidents(db, bag.id)
     return templates.TemplateResponse(
         request=request,
         name="bags/detail.html",
-        context={"bag": bag, "user": user, **_ENUM_CONTEXT},
+        context={"bag": bag, "user": user, "incidents": incidents, **_ENUM_CONTEXT},
+    )
+
+
+@router.post("/{bag_id}/incidents/{bag_checkin_id}/resolve")
+async def resolve_incident(
+    bag: OwnedBag,
+    bag_checkin_id: int,
+    resolution: Annotated[str, Form()],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await trip_service.resolve_incident(db, bag_checkin_id, bag.id, resolution)
+    return RedirectResponse(
+        url=f"/bags/{bag.id}?success=Incident+updated",
+        status_code=status.HTTP_302_FOUND,
     )
 
 

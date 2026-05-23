@@ -369,3 +369,37 @@ async def save_pir_receipt(
 
     bag_checkin.pir_receipt_filename = await _write_upload(content, "pir", suffix)
     await db.commit()
+
+
+async def get_bag_incidents(db: AsyncSession, bag_id: int) -> list[TripCheckinBag]:
+    result = await db.execute(
+        select(TripCheckinBag)
+        .where(
+            TripCheckinBag.bag_id == bag_id,
+            TripCheckinBag.collection_outcome.in_(["damaged", "missing"]),
+        )
+        .options(
+            selectinload(TripCheckinBag.checkin).selectinload(TripCheckin.trip),
+            selectinload(TripCheckinBag.damage_photos),
+        )
+        .order_by(TripCheckinBag.collected_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def resolve_incident(
+    db: AsyncSession, bag_checkin_id: int, bag_id: int, resolution: str
+) -> None:
+    bc = (
+        await db.execute(
+            select(TripCheckinBag).where(
+                TripCheckinBag.id == bag_checkin_id,
+                TripCheckinBag.bag_id == bag_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not bc:
+        return
+    bc.resolution = resolution
+    bc.resolved_at = datetime.utcnow()
+    await db.commit()
