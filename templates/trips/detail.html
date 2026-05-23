@@ -61,7 +61,7 @@
       {% if trip.packing_list %}
       {% set packed = trip.packing_list.items | selectattr('is_packed') | list | length %}
       {% set total = trip.packing_list.items | length %}
-      <span class="badge bg-{% if packed == total and total > 0 %}success{% else %}secondary{% endif %} ms-1">
+      <span id="packing-tab-badge" class="badge bg-{% if packed == total and total > 0 %}success{% else %}secondary{% endif %} ms-1">
         {{ packed }}/{{ total }}
       </span>
       {% endif %}
@@ -295,11 +295,11 @@
     {% if total_count > 0 %}
     <div class="mb-3">
       <div class="d-flex justify-content-between small text-muted mb-1">
-        <span>{{ packed_count }} of {{ total_count }} packed</span>
-        <span>{{ ((packed_count / total_count) * 100) | int }}%</span>
+        <span id="pack-progress-text">{{ packed_count }} of {{ total_count }} packed</span>
+        <span id="pack-progress-pct">{{ ((packed_count / total_count) * 100) | int }}%</span>
       </div>
       <div class="progress" style="height:6px">
-        <div class="progress-bar bg-success" style="width:{{ ((packed_count / total_count) * 100) | int }}%"></div>
+        <div id="pack-progress-bar" class="progress-bar bg-success" style="width:{{ ((packed_count / total_count) * 100) | int }}%"></div>
       </div>
     </div>
     {% endif %}
@@ -492,8 +492,23 @@
       const res = await fetch(cb.dataset.url, { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
-        const row = cb.closest('li');
-        row.classList.toggle('packed-row', data.is_packed);
+        cb.closest('li').classList.toggle('packed-row', data.is_packed);
+
+        const { packed_count, total_count } = data;
+        const pct = total_count > 0 ? Math.floor((packed_count / total_count) * 100) : 0;
+
+        const progressText = document.getElementById('pack-progress-text');
+        const progressPct  = document.getElementById('pack-progress-pct');
+        const progressBar  = document.getElementById('pack-progress-bar');
+        const tabBadge     = document.getElementById('packing-tab-badge');
+
+        if (progressText) progressText.textContent = `${packed_count} of ${total_count} packed`;
+        if (progressPct)  progressPct.textContent  = `${pct}%`;
+        if (progressBar)  progressBar.style.width  = `${pct}%`;
+        if (tabBadge) {
+          tabBadge.textContent = `${packed_count}/${total_count}`;
+          tabBadge.className = `badge ms-1 bg-${packed_count === total_count && total_count > 0 ? 'success' : 'secondary'}`;
+        }
       } else {
         cb.checked = !cb.checked; // revert
       }

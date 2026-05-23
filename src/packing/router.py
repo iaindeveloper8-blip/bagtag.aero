@@ -269,7 +269,11 @@ async def toggle_packed(
 ):
     packing_list = await packing_service.get_packing_list(db, trip.id)
     item = await packing_service.toggle_item_packed(db, packing_list, item_id)
-    return JSONResponse({"is_packed": item.is_packed})
+    packed_count = sum(1 for i in packing_list.items if i.is_packed)
+    total_count = len(packing_list.items)
+    return JSONResponse(
+        {"is_packed": item.is_packed, "packed_count": packed_count, "total_count": total_count}
+    )
 
 
 @router.post("/trips/{trip_id}/items/{item_id}/assign-bag")
