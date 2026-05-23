@@ -12,7 +12,14 @@ from src.bags.models import Bag
 from src.config import settings
 from src.packing.models import PackingList, PackingListItem
 from src.trips.exceptions import BagAlreadyOnTrip, FlightNotFound, TripNotFound
-from src.trips.models import Flight, Trip, TripBag, TripCheckin, TripCheckinBag
+from src.trips.models import (
+    Flight,
+    Trip,
+    TripBag,
+    TripCheckin,
+    TripCheckinBag,
+    TripCheckinBagDamagePhoto,
+)
 from src.trips.schemas import FlightCreate, TripCreate, TripUpdate
 
 _ALLOWED_RECEIPT_CONTENT_TYPES = {
@@ -23,6 +30,8 @@ _ALLOWED_RECEIPT_CONTENT_TYPES = {
     "application/pdf",
 }
 _ALLOWED_RECEIPT_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf"}
+_ALLOWED_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
 def compute_active_checkin(trip: Trip) -> TripCheckin | None:
@@ -57,6 +66,9 @@ async def get_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
             .selectinload(TripCheckin.bag_checkins)
             .selectinload(TripCheckinBag.bag)
             .selectinload(Bag.images),
+            selectinload(Trip.checkins)
+            .selectinload(TripCheckin.bag_checkins)
+            .selectinload(TripCheckinBag.damage_photos),
             selectinload(Trip.packing_list)
             .selectinload(PackingList.items)
             .selectinload(PackingListItem.bag),
@@ -260,12 +272,100 @@ async def save_checkin_bag_receipt(
     await db.commit()
 
 
-async def mark_checkin_bags_collected(
-    db: AsyncSession, checkin: TripCheckin, bag_ids: list[int]
+async def save_collection_outcomes(
+    db: AsyncSession,
+    checkin: TripCheckin,
+    outcome_data: dict[int, dict],
 ) -> None:
     now = datetime.utcnow()
-    bag_ids_set = set(bag_ids)
     for bc in checkin.bag_checkins:
-        if bc.bag_id in bag_ids_set:
+        if bc.bag_id in outcome_data and bc.status == "checked_in" and not bc.collected_at:
+            data = outcome_data[bc.bag_id]
             bc.collected_at = now
+            bc.collection_outcome = data["outcome"]
+            bc.pir_reference = data.get("pir_reference")
+    await db.commit()
+
+
+async def _write_upload(content: bytes, prefix: str, suffix: str) -> str:
+    filename = f"{prefix}_{uuid.uuid4().hex}{suffix}"
+    settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    async with aiofiles.open(settings.UPLOAD_DIR / filename, "wb") as f:
+        await f.write(content)
+    return filename
+
+
+async def save_damage_photos(
+    db: AsyncSession, checkin_id: int, bag_id: int, files: list[UploadFile]
+) -> None:
+    bag_checkin = (
+        await db.execute(
+            select(TripCheckinBag).where(
+                TripCheckinBag.checkin_id == checkin_id,
+                TripCheckinBag.bag_id == bag_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not bag_checkin:
+        return
+
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    saved = 0
+    for file in files:
+        if saved >= 6:
+            break
+        content_type = file.content_type or ""
+        suffix = Path(file.filename or "").suffix.lower()
+        if (
+            content_type not in _ALLOWED_IMAGE_CONTENT_TYPES
+            and suffix not in _ALLOWED_IMAGE_EXTENSIONS
+        ):
+            continue
+        content = await file.read()
+        if not content or len(content) > max_bytes:
+            continue
+        if suffix not in _ALLOWED_IMAGE_EXTENSIONS:
+            suffix = ".jpg"
+        filename = await _write_upload(content, "damage", suffix)
+        db.add(TripCheckinBagDamagePhoto(bag_checkin_id=bag_checkin.id, filename=filename))
+        saved += 1
+    if saved:
+        await db.commit()
+
+
+async def save_pir_receipt(
+    db: AsyncSession, checkin_id: int, bag_id: int, file: UploadFile
+) -> None:
+    bag_checkin = (
+        await db.execute(
+            select(TripCheckinBag).where(
+                TripCheckinBag.checkin_id == checkin_id,
+                TripCheckinBag.bag_id == bag_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not bag_checkin:
+        return
+
+    content_type = file.content_type or ""
+    suffix = Path(file.filename or "").suffix.lower()
+    if (
+        content_type not in _ALLOWED_RECEIPT_CONTENT_TYPES
+        and suffix not in _ALLOWED_RECEIPT_EXTENSIONS
+    ):
+        return
+
+    content = await file.read()
+    if not content:
+        return
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if len(content) > max_bytes:
+        return
+    if suffix not in _ALLOWED_RECEIPT_EXTENSIONS:
+        suffix = ".jpg"
+
+    if bag_checkin.pir_receipt_filename:
+        (settings.UPLOAD_DIR / bag_checkin.pir_receipt_filename).unlink(missing_ok=True)
+
+    bag_checkin.pir_receipt_filename = await _write_upload(content, "pir", suffix)
     await db.commit()

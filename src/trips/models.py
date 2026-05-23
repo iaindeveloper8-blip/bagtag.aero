@@ -136,6 +136,30 @@ class TripCheckinBag(Base):
     receipt_filename: Mapped[str | None] = mapped_column(String(200))
     checked_in_at: Mapped[datetime | None] = mapped_column(DateTime)
     collected_at: Mapped[datetime | None] = mapped_column(DateTime)
+    # "collected" | "damaged" | "missing" — set when collected_at is recorded
+    collection_outcome: Mapped[str | None] = mapped_column(String(20))
+    pir_reference: Mapped[str | None] = mapped_column(String(50))
+    pir_receipt_filename: Mapped[str | None] = mapped_column(String(200))
 
     checkin: Mapped["TripCheckin"] = relationship("TripCheckin", back_populates="bag_checkins")
     bag: Mapped["Bag"] = relationship("Bag")  # type: ignore[name-defined]  # noqa: F821
+    damage_photos: Mapped[list["TripCheckinBagDamagePhoto"]] = relationship(
+        "TripCheckinBagDamagePhoto", back_populates="bag_checkin", cascade="all, delete-orphan"
+    )
+
+
+class TripCheckinBagDamagePhoto(Base):
+    __tablename__ = "trip_checkin_bag_damage_photo"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bag_checkin_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("trip_checkin_bag.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+    bag_checkin: Mapped["TripCheckinBag"] = relationship(
+        "TripCheckinBag", back_populates="damage_photos"
+    )

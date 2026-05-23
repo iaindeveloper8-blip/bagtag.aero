@@ -94,6 +94,19 @@ async def lifespan(app: FastAPI):
         # Drop obsolete flight_checkin table if it exists
         await conn.execute(text("DROP TABLE IF EXISTS flight_checkin"))
 
+        # Add outcome/PIR columns to trip_checkin_bag
+        result = await conn.execute(text("PRAGMA table_info(trip_checkin_bag)"))
+        tcb_cols = [row[1] for row in result.fetchall()]
+        for col, definition in [
+            ("collection_outcome", "VARCHAR(20)"),
+            ("pir_reference", "VARCHAR(50)"),
+            ("pir_receipt_filename", "VARCHAR(200)"),
+        ]:
+            if col not in tcb_cols:
+                await conn.execute(
+                    text(f"ALTER TABLE trip_checkin_bag ADD COLUMN {col} {definition}")
+                )
+
     async with SessionFactory() as db:
         from src.packing.seed import seed_default_templates
 

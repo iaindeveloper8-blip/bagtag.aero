@@ -12,59 +12,134 @@
 
 <h1 class="h4 mb-1"><i class="bi bi-bag-check-fill me-2 text-success"></i>Collect Bags</h1>
 <p class="text-muted mb-4">
-  Confirm which bags you collected at baggage reclaim. Tick each bag as you retrieve it.
+  Record what happened with each checked bag at baggage reclaim.
 </p>
 
-<form method="post" action="/trips/{{ trip.id }}/collect">
+<form method="post" action="/trips/{{ trip.id }}/collect" enctype="multipart/form-data">
   <div class="row g-3 mb-4">
     {% for bc in checked_in %}
     {% set bag = bc.bag %}
     <div class="col-12">
-      <div class="card {% if bc.collected_at %}border-success{% endif %}">
-        <div class="card-body py-2">
-          <div class="d-flex gap-3 align-items-center">
+      <div class="card
+        {% if bc.collected_at %}
+          {% if bc.collection_outcome == 'collected' %}border-success
+          {% elif bc.collection_outcome in ['damaged', 'missing'] %}border-danger
+          {% else %}border-success{% endif %}
+        {% endif %}">
+        <div class="card-body">
+          <div class="d-flex gap-3 align-items-start">
 
             {% if bag.primary_image %}
             <img src="/static/uploads/{{ bag.primary_image.filename }}"
-                 style="width:56px;height:56px;object-fit:cover;border-radius:.375rem;flex-shrink:0;"
+                 style="width:64px;height:64px;object-fit:cover;border-radius:.375rem;flex-shrink:0;"
                  alt="{{ bag.name }}">
             {% else %}
             <div class="d-flex align-items-center justify-content-center bg-light flex-shrink-0"
-                 style="width:56px;height:56px;border-radius:.375rem;">
-              <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.25rem"></i>
+                 style="width:64px;height:64px;border-radius:.375rem;">
+              <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.5rem"></i>
             </div>
             {% endif %}
 
             <div class="flex-grow-1">
-              <div class="fw-semibold">{{ bag.name }}</div>
-              {% if bc.licence_plate_number %}
-              <div class="text-muted small font-monospace">
-                <i class="bi bi-tag me-1"></i>{{ bc.licence_plate_number }}
-              </div>
-              {% endif %}
-              {% if bc.weight_kg %}
-              <div class="text-muted small">{{ bc.weight_kg }} kg</div>
-              {% endif %}
-            </div>
+              <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                <div>
+                  <div class="fw-semibold">{{ bag.name }}</div>
+                  {% if bc.licence_plate_number %}
+                  <div class="text-muted small font-monospace">
+                    <i class="bi bi-tag me-1"></i>{{ bc.licence_plate_number }}
+                  </div>
+                  {% endif %}
+                  {% if bc.weight_kg %}
+                  <div class="text-muted small">{{ bc.weight_kg }} kg</div>
+                  {% endif %}
+                </div>
 
-            <div class="flex-shrink-0 d-flex align-items-center gap-2">
+                {% if bc.collected_at %}
+                {% if bc.collection_outcome == 'collected' %}
+                <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Collected</span>
+                {% elif bc.collection_outcome == 'damaged' %}
+                <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Damaged</span>
+                {% elif bc.collection_outcome == 'missing' %}
+                <span class="badge bg-danger"><i class="bi bi-question-circle me-1"></i>Missing</span>
+                {% else %}
+                <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Processed</span>
+                {% endif %}
+                {% endif %}
+              </div>
+
               {% if bc.collected_at %}
-              <span class="badge bg-success">
-                <i class="bi bi-check2 me-1"></i>Collected {{ bc.collected_at.strftime('%H:%M') }}
-              </span>
-              <input type="hidden" name="collected_bag_id" value="{{ bag.id }}">
-              {% else %}
-              <div class="form-check form-check-reverse mb-0">
-                <input class="form-check-input" type="checkbox"
-                       name="collected_bag_id" value="{{ bag.id }}"
-                       id="collect_{{ bag.id }}">
-                <label class="form-check-label fw-medium" for="collect_{{ bag.id }}">
-                  Collected
-                </label>
+              {% if bc.pir_reference %}
+              <div class="mt-1 small text-muted">
+                <i class="bi bi-file-earmark-text me-1"></i>PIR:
+                <span class="font-monospace">{{ bc.pir_reference }}</span>
               </div>
               {% endif %}
-            </div>
+              {% else %}
+              <!-- Outcome selector -->
+              <div class="mt-2">
+                <div class="d-flex gap-3 flex-wrap">
+                  <div class="form-check">
+                    <input class="form-check-input outcome-radio" type="radio"
+                           name="outcome_{{ bag.id }}" id="outcome_collected_{{ bag.id }}"
+                           value="collected" data-bag="{{ bag.id }}" checked>
+                    <label class="form-check-label fw-medium" for="outcome_collected_{{ bag.id }}">
+                      <i class="bi bi-check2-circle me-1 text-success"></i>Collected
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input outcome-radio" type="radio"
+                           name="outcome_{{ bag.id }}" id="outcome_damaged_{{ bag.id }}"
+                           value="damaged" data-bag="{{ bag.id }}">
+                    <label class="form-check-label fw-medium" for="outcome_damaged_{{ bag.id }}">
+                      <i class="bi bi-exclamation-triangle me-1 text-warning"></i>Damaged
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input outcome-radio" type="radio"
+                           name="outcome_{{ bag.id }}" id="outcome_missing_{{ bag.id }}"
+                           value="missing" data-bag="{{ bag.id }}">
+                    <label class="form-check-label fw-medium" for="outcome_missing_{{ bag.id }}">
+                      <i class="bi bi-question-circle me-1 text-danger"></i>Missing
+                    </label>
+                  </div>
+                </div>
 
+                <!-- Damage photos (damaged only) -->
+                <div id="damage_section_{{ bag.id }}" class="mt-3 border rounded p-3 bg-light d-none">
+                  <label class="form-label small fw-semibold mb-1">
+                    Damage Photos
+                    <span class="text-muted fw-normal">(up to 6 images)</span>
+                  </label>
+                  <input type="file" class="form-control form-control-sm"
+                         name="damage_photos_{{ bag.id }}"
+                         accept="image/*" multiple>
+                </div>
+
+                <!-- PIR details (damaged or missing) -->
+                <div id="pir_section_{{ bag.id }}" class="mt-3 border rounded p-3 bg-light d-none">
+                  <h6 class="small fw-semibold mb-2">
+                    <i class="bi bi-file-earmark-text me-1"></i>Property Irregularity Report (PIR)
+                  </h6>
+                  <div class="row g-2">
+                    <div class="col-sm-5">
+                      <label class="form-label small fw-semibold mb-1">PIR Reference Number</label>
+                      <input type="text" class="form-control form-control-sm font-monospace"
+                             name="pir_reference_{{ bag.id }}"
+                             maxlength="50" placeholder="e.g. LGWBA12345">
+                    </div>
+                    <div class="col-sm-7">
+                      <label class="form-label small fw-semibold mb-1">PIR Receipt</label>
+                      <input type="file" class="form-control form-control-sm"
+                             name="pir_receipt_{{ bag.id }}"
+                             accept="image/*,.pdf">
+                      <div class="form-text">Photo or PDF of the PIR receipt (optional)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+            </div>
           </div>
         </div>
       </div>
@@ -72,20 +147,34 @@
     {% endfor %}
   </div>
 
-  {% set all_collected = checked_in | selectattr('collected_at') | list | length == checked_in | length %}
-  {% if not all_collected %}
+  {% set all_processed = checked_in | selectattr('collected_at') | list | length == checked_in | length %}
+  {% if not all_processed %}
   <div class="d-flex gap-2">
     <button type="submit" class="btn btn-success">
-      <i class="bi bi-bag-check me-1"></i>Confirm Collection
+      <i class="bi bi-bag-check me-1"></i>Confirm Outcomes
     </button>
     <a href="/trips/{{ trip.id }}?tab=bags" class="btn btn-outline-secondary">Back to Trip</a>
   </div>
   {% else %}
   <div class="alert alert-success d-flex align-items-center gap-2">
     <i class="bi bi-check-circle-fill fs-5"></i>
-    <div>All bags collected successfully.</div>
+    <div>All bags processed at baggage reclaim.</div>
   </div>
   <a href="/trips/{{ trip.id }}?tab=bags" class="btn btn-outline-secondary">Back to Trip</a>
   {% endif %}
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('.outcome-radio').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const id = radio.dataset.bag;
+      const damageSection = document.getElementById('damage_section_' + id);
+      const pirSection = document.getElementById('pir_section_' + id);
+      if (damageSection) damageSection.classList.toggle('d-none', radio.value !== 'damaged');
+      if (pirSection) pirSection.classList.toggle('d-none', radio.value === 'collected');
+    });
+  });
+</script>
 {% endblock %}

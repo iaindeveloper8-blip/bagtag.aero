@@ -426,8 +426,32 @@ async def save_collect(
             status_code=status.HTTP_302_FOUND,
         )
     form = await request.form()
-    collected_ids = [int(v) for k, v in form.multi_items() if k == "collected_bag_id"]
-    await trip_service.mark_checkin_bags_collected(db, active_checkin, collected_ids)
+
+    outcome_data: dict[int, dict] = {}
+    for bc in active_checkin.bag_checkins:
+        if bc.status != "checked_in" or bc.collected_at:
+            continue
+        bag_id = bc.bag_id
+        outcome = form.get(f"outcome_{bag_id}")
+        if not outcome:
+            continue
+        pir_raw = form.get(f"pir_reference_{bag_id}") or ""
+        pir_reference = pir_raw.strip()[:50] or None
+        outcome_data[bag_id] = {"outcome": str(outcome), "pir_reference": pir_reference}
+
+    await trip_service.save_collection_outcomes(db, active_checkin, outcome_data)
+
+    for bag_id, data in outcome_data.items():
+        if data["outcome"] == "damaged":
+            damage_files = form.getlist(f"damage_photos_{bag_id}")
+            valid_files = [f for f in damage_files if hasattr(f, "filename") and f.filename]
+            if valid_files:
+                await trip_service.save_damage_photos(db, active_checkin.id, bag_id, valid_files)
+        if data["outcome"] in ("damaged", "missing"):
+            pir_file = form.get(f"pir_receipt_{bag_id}")
+            if pir_file and hasattr(pir_file, "filename") and pir_file.filename:
+                await trip_service.save_pir_receipt(db, active_checkin.id, bag_id, pir_file)
+
     return RedirectResponse(
         url=f"/trips/{trip.id}?success=Bag+collection+confirmed&tab=bags",
         status_code=status.HTTP_302_FOUND,

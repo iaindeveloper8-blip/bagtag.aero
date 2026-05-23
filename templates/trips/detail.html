@@ -301,19 +301,39 @@
       {% for ci in trip.checkins %}
       {% set ci_checked = ci.bag_checkins | selectattr('status', 'equalto', 'checked_in') | list %}
       {% set ci_carry = ci.bag_checkins | selectattr('status', 'equalto', 'carry_on') | list %}
-      {% set ci_all_collected = ci_checked | length > 0 and ci_checked | selectattr('collected_at') | list | length == ci_checked | length %}
-      <div class="card mb-2 {% if ci_all_collected %}border-success border-opacity-50{% endif %}">
+      {% set ci_all_processed = ci_checked | length > 0 and ci_checked | selectattr('collected_at') | list | length == ci_checked | length %}
+      {% set ci_damaged = ci_checked | selectattr('collection_outcome', 'equalto', 'damaged') | list %}
+      {% set ci_missing = ci_checked | selectattr('collection_outcome', 'equalto', 'missing') | list %}
+      {% set ci_has_issue = ci_damaged | length > 0 or ci_missing | length > 0 %}
+      <div class="card mb-2 {% if ci_all_processed %}{% if ci_has_issue %}border-danger border-opacity-50{% else %}border-success border-opacity-50{% endif %}{% endif %}">
         <div class="card-body py-2 px-3">
           <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
             <div>
               <span class="small fw-semibold">{{ ci.created_at.strftime('%d %b %Y %H:%M') }}</span>
               <div class="d-flex flex-wrap gap-1 mt-1">
                 {% for bc in ci_checked %}
-                <span class="badge {% if bc.collected_at %}bg-success{% else %}bg-warning text-dark{% endif %}" style="font-size:.65rem">
+                {% if not bc.collected_at %}
+                <span class="badge bg-warning text-dark" style="font-size:.65rem">
                   <i class="bi bi-tag me-1"></i>{{ bc.bag.name }}
                   {% if bc.licence_plate_number %}<span class="font-monospace">· {{ bc.licence_plate_number }}</span>{% endif %}
-                  {% if bc.collected_at %}<i class="bi bi-check2 ms-1"></i>{% endif %}
                 </span>
+                {% elif bc.collection_outcome == 'damaged' %}
+                <span class="badge bg-danger" style="font-size:.65rem">
+                  <i class="bi bi-exclamation-triangle me-1"></i>{{ bc.bag.name }}
+                  {% if bc.pir_reference %}<span class="font-monospace">· {{ bc.pir_reference }}</span>{% endif %}
+                </span>
+                {% elif bc.collection_outcome == 'missing' %}
+                <span class="badge bg-danger" style="font-size:.65rem">
+                  <i class="bi bi-question-circle me-1"></i>{{ bc.bag.name }}
+                  {% if bc.pir_reference %}<span class="font-monospace">· {{ bc.pir_reference }}</span>{% endif %}
+                </span>
+                {% else %}
+                <span class="badge bg-success" style="font-size:.65rem">
+                  <i class="bi bi-tag me-1"></i>{{ bc.bag.name }}
+                  {% if bc.licence_plate_number %}<span class="font-monospace">· {{ bc.licence_plate_number }}</span>{% endif %}
+                  <i class="bi bi-check2 ms-1"></i>
+                </span>
+                {% endif %}
                 {% endfor %}
                 {% for bc in ci_carry %}
                 <span class="badge bg-light text-dark border" style="font-size:.65rem">
@@ -322,8 +342,14 @@
                 {% endfor %}
               </div>
             </div>
-            {% if ci_all_collected %}
-            <span class="badge bg-success flex-shrink-0" style="font-size:.7rem">All collected</span>
+            {% if ci_all_processed %}
+              {% if ci_has_issue %}
+              <span class="badge bg-danger flex-shrink-0" style="font-size:.7rem">
+                {% if ci_missing %}Missing{% else %}Damage reported{% endif %}
+              </span>
+              {% else %}
+              <span class="badge bg-success flex-shrink-0" style="font-size:.7rem">All collected</span>
+              {% endif %}
             {% elif ci_checked %}
             <span class="badge bg-warning text-dark flex-shrink-0" style="font-size:.7rem">Awaiting collection</span>
             {% endif %}
