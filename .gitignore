@@ -24,6 +24,7 @@ dist/
 
 # Claude Code
 .claude/
+memory/
 
 # Editor
 .vscode/
