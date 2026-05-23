@@ -26,7 +26,7 @@ Track your luggage and trips — know what you packed, where it went, and how to
 git clone https://github.com/your-username/bagtag.aero
 cd bagtag.aero
 uv sync
-uv run uvicorn src.main:app --reload
+just dev
 ```
 
 Open http://localhost:8000, register an account, and start tracking.
@@ -36,15 +36,12 @@ Open http://localhost:8000, register an account, and start tracking.
 ```bash
 uv sync --extra dev
 
-# Tests
-uv run python -m pytest tests/ -v
-
-# Linting / formatting
-uv run ruff check src tests
-uv run black src tests
+just test   # run tests
+just lint   # check formatting, linting, and security
+just fmt    # auto-fix formatting
 ```
 
-CI runs the same three checks on every push and pull request (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+CI runs the same checks on every push and pull request (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Configuration
 
