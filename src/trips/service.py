@@ -13,7 +13,10 @@ async def get_trips(db: AsyncSession, user_id: int) -> list[Trip]:
     result = await db.execute(
         select(Trip)
         .where(Trip.user_id == user_id)
-        .options(selectinload(Trip.flights), selectinload(Trip.trip_bags).selectinload(TripBag.bag))
+        .options(
+            selectinload(Trip.flights).selectinload(Flight.reroutings),
+            selectinload(Trip.trip_bags).selectinload(TripBag.bag),
+        )
         .order_by(Trip.departure_date.asc().nullslast(), Trip.created_at.desc())
     )
     return list(result.scalars().all())
@@ -24,7 +27,7 @@ async def get_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
         select(Trip)
         .where(Trip.id == trip_id, Trip.user_id == user_id)
         .options(
-            selectinload(Trip.flights),
+            selectinload(Trip.flights).selectinload(Flight.reroutings),
             selectinload(Trip.trip_bags).selectinload(TripBag.bag).selectinload(Bag.images),
             selectinload(Trip.packing_list)
             .selectinload(PackingList.items)
@@ -71,10 +74,31 @@ async def add_flight(db: AsyncSession, trip: Trip, data: FlightCreate) -> Flight
     return flight
 
 
+async def cancel_flight(db: AsyncSession, trip: Trip, flight_id: int) -> None:
+    flight = next((f for f in trip.flights if f.id == flight_id), None)
+    if not flight:
+        raise FlightNotFound()
+    flight.is_cancelled = True
+    await db.commit()
+
+
+async def uncancel_flight(db: AsyncSession, trip: Trip, flight_id: int) -> None:
+    flight = next((f for f in trip.flights if f.id == flight_id), None)
+    if not flight:
+        raise FlightNotFound()
+    flight.is_cancelled = False
+    await db.commit()
+
+
 async def delete_flight(db: AsyncSession, trip: Trip, flight_id: int) -> None:
     flight = next((f for f in trip.flights if f.id == flight_id), None)
     if not flight:
         raise FlightNotFound()
+    # Null out rerouted_from_id on any reroutings before deleting the parent
+    # (SQLite does not enforce FK ON DELETE SET NULL without PRAGMA foreign_keys)
+    for child in list(flight.reroutings):
+        child.rerouted_from_id = None
+    await db.flush()
     await db.delete(flight)
     await db.commit()
 

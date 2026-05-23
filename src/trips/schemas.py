@@ -25,6 +25,8 @@ class FlightCreate(BaseModel):
     departure_at: datetime | None = None
     arrival_at: datetime | None = None
     is_return: bool = False
+    is_cancelled: bool = False
+    rerouted_from_id: int | None = None
     notes: str | None = None
 
 

@@ -162,40 +162,122 @@ async def delete_trip(
 async def add_flight(
     trip: OwnedTrip,
     db: Annotated[AsyncSession, Depends(get_db)],
-    flight_number: Annotated[str | None, Form()] = None,
-    airline: Annotated[str | None, Form()] = None,
-    departure_airport: Annotated[str, Form()] = "",
-    arrival_airport: Annotated[str, Form()] = "",
-    departure_at: Annotated[str | None, Form()] = None,
-    arrival_at: Annotated[str | None, Form()] = None,
+    flight_number: Annotated[str, Form()],
+    departure_date: Annotated[str, Form()],
     is_return: Annotated[str | None, Form()] = None,
-    notes: Annotated[str | None, Form()] = None,
 ):
-    from datetime import datetime as _dt
+    from datetime import date as _date
+    from urllib.parse import quote_plus
 
-    def _parse_dt(v: str | None):
-        if not v or not v.strip():
-            return None
-        for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S"):
-            try:
-                return _dt.strptime(v, fmt)
-            except ValueError:
-                continue
-        return None
+    from src.trips.fr24 import lookup_flight
+
+    try:
+        dep_date = _date.fromisoformat(departure_date)
+    except ValueError:
+        return RedirectResponse(
+            url=f"/trips/{trip.id}?error=Invalid+departure+date&tab=flights",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    try:
+        info = await lookup_flight(flight_number.strip().upper(), dep_date)
+    except Exception as exc:
+        return RedirectResponse(
+            url=f"/trips/{trip.id}?error={quote_plus(str(exc))}&tab=flights",
+            status_code=status.HTTP_302_FOUND,
+        )
 
     data = FlightCreate(
-        flight_number=flight_number or None,
-        airline=airline or None,
-        departure_airport=(departure_airport or "").upper().strip(),
-        arrival_airport=(arrival_airport or "").upper().strip(),
-        departure_at=_parse_dt(departure_at),
-        arrival_at=_parse_dt(arrival_at),
+        flight_number=flight_number.strip().upper(),
+        airline=info.airline,
+        departure_airport=info.departure_airport,
+        arrival_airport=info.arrival_airport,
+        departure_at=info.departure_at,
+        arrival_at=info.arrival_at,
         is_return=is_return == "on",
-        notes=notes or None,
     )
     await trip_service.add_flight(db, trip, data)
     return RedirectResponse(
         url=f"/trips/{trip.id}?success=Flight+added&tab=flights",
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
+@router.post("/{trip_id}/flights/{flight_id}/cancel")
+async def cancel_flight(
+    trip: OwnedTrip,
+    flight_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await trip_service.cancel_flight(db, trip, flight_id)
+    return RedirectResponse(
+        url=f"/trips/{trip.id}?tab=flights",
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
+@router.post("/{trip_id}/flights/{flight_id}/uncancel")
+async def uncancel_flight(
+    trip: OwnedTrip,
+    flight_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await trip_service.uncancel_flight(db, trip, flight_id)
+    return RedirectResponse(
+        url=f"/trips/{trip.id}?tab=flights",
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
+@router.post("/{trip_id}/flights/{flight_id}/reroutings")
+async def add_rerouting(
+    trip: OwnedTrip,
+    flight_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    flight_number: Annotated[str, Form()],
+    departure_date: Annotated[str, Form()],
+):
+    from datetime import date as _date
+    from urllib.parse import quote_plus
+
+    from src.trips.fr24 import lookup_flight
+
+    parent = next((f for f in trip.flights if f.id == flight_id), None)
+    if not parent:
+        return RedirectResponse(
+            url=f"/trips/{trip.id}?error=Flight+not+found&tab=flights",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    try:
+        dep_date = _date.fromisoformat(departure_date)
+    except ValueError:
+        return RedirectResponse(
+            url=f"/trips/{trip.id}?error=Invalid+departure+date&tab=flights",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    try:
+        info = await lookup_flight(flight_number.strip().upper(), dep_date)
+    except Exception as exc:
+        return RedirectResponse(
+            url=f"/trips/{trip.id}?error={quote_plus(str(exc))}&tab=flights",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    data = FlightCreate(
+        flight_number=flight_number.strip().upper(),
+        airline=info.airline,
+        departure_airport=info.departure_airport,
+        arrival_airport=info.arrival_airport,
+        departure_at=info.departure_at,
+        arrival_at=info.arrival_at,
+        is_return=parent.is_return,
+        rerouted_from_id=flight_id,
+    )
+    await trip_service.add_flight(db, trip, data)
+    return RedirectResponse(
+        url=f"/trips/{trip.id}?success=Rerouting+flight+added&tab=flights",
         status_code=status.HTTP_302_FOUND,
     )
 

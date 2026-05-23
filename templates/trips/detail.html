@@ -46,7 +46,7 @@
   <li class="nav-item">
     <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-flights">
       <i class="bi bi-airplane me-1"></i>Flights
-      {% if trip.flights %}<span class="badge bg-secondary ms-1">{{ trip.flights | length }}</span>{% endif %}
+      {% if trip.flights %}<span class="badge bg-secondary ms-1">{{ trip.flights | selectattr('rerouted_from_id', 'none') | list | length }}</span>{% endif %}
     </button>
   </li>
   <li class="nav-item">
@@ -73,7 +73,86 @@
 
   <!-- ── Flights tab ──────────────────────────────────────────────────── -->
   <div class="tab-pane fade show active" id="tab-flights">
-    {% if trip.flights %}
+
+  {%- macro render_flight(f, depth) -%}
+    {%- set indent = depth * 1.5 -%}
+    <tr class="{% if f.is_cancelled %}table-danger{% endif %}">
+      <td style="padding-left:calc(0.5rem + {{ indent }}rem)">
+        {% if depth > 0 %}<span class="text-muted me-1">↳</span>{% endif %}
+        {% if f.flight_number %}<strong class="{% if f.is_cancelled %}text-decoration-line-through{% endif %}">{{ f.flight_number }}</strong>{% endif %}
+        {% if f.airline %}<br><span class="text-muted small">{{ f.airline }}</span>{% endif %}
+      </td>
+      <td>
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle {% if f.is_cancelled %}opacity-50{% endif %}">
+          {{ f.departure_airport }} <i class="bi bi-arrow-right"></i> {{ f.arrival_airport }}
+        </span>
+      </td>
+      <td class="small {% if f.is_cancelled %}text-muted{% endif %}">{{ f.departure_at.strftime('%d %b %Y %H:%M') if f.departure_at else '—' }}</td>
+      <td class="small {% if f.is_cancelled %}text-muted{% endif %}">{{ f.arrival_at.strftime('%d %b %Y %H:%M') if f.arrival_at else '—' }}</td>
+      <td>
+        <span class="badge {% if f.is_return %}bg-info text-dark{% else %}bg-success{% endif %} {% if f.is_cancelled %}opacity-50{% endif %}">
+          {{ 'Return' if f.is_return else 'Outbound' }}
+        </span>
+      </td>
+      <td>
+        {% if f.is_cancelled %}
+          <span class="badge bg-danger">Cancelled</span>
+        {% endif %}
+      </td>
+      <td class="text-end">
+        <div class="d-flex gap-1 justify-content-end">
+          {% if f.is_cancelled %}
+          <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/uncancel">
+            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1" title="Uncancel">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+          </form>
+          {% else %}
+          <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/cancel">
+            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-1" title="Mark cancelled">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </form>
+          {% endif %}
+          <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/delete">
+            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"
+                    data-confirm="Remove this flight?">&times;</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+
+    {%- for r in f.reroutings -%}
+      {{ render_flight(r, depth + 1) }}
+    {%- endfor -%}
+
+    {% if f.is_cancelled %}
+    <tr class="table-light">
+      <td colspan="7" style="padding-left:calc(0.5rem + {{ indent + 1.5 }}rem)">
+        <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/reroutings"
+              class="d-flex align-items-end gap-2 flex-wrap py-1">
+          <div>
+            <label class="form-label small text-muted mb-1">Rerouting flight no.</label>
+            <input type="text" class="form-control form-control-sm" name="flight_number"
+                   placeholder="e.g. BA456" maxlength="20" required style="text-transform:uppercase;width:130px">
+          </div>
+          <div>
+            <label class="form-label small text-muted mb-1">Date</label>
+            <input type="date" class="form-control form-control-sm" name="departure_date" required style="width:140px">
+          </div>
+          <div class="align-self-end">
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="bi bi-search me-1"></i>Look up &amp; Add rerouting
+            </button>
+          </div>
+        </form>
+      </td>
+    </tr>
+    {% endif %}
+  {%- endmacro -%}
+
+    {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
+    {% if root_flights %}
     <div class="table-responsive mb-4">
       <table class="table table-sm align-middle">
         <thead class="table-light">
@@ -83,33 +162,13 @@
             <th>Departure</th>
             <th>Arrival</th>
             <th>Type</th>
+            <th>Status</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {% for f in trip.flights %}
-          <tr>
-            <td>
-              {% if f.flight_number %}<strong>{{ f.flight_number }}</strong>{% endif %}
-              {% if f.airline %}<br><span class="text-muted small">{{ f.airline }}</span>{% endif %}
-            </td>
-            <td>
-              <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">
-                {{ f.departure_airport }} <i class="bi bi-arrow-right"></i> {{ f.arrival_airport }}
-              </span>
-            </td>
-            <td class="small">{{ f.departure_at.strftime('%d %b %Y %H:%M') if f.departure_at else '—' }}</td>
-            <td class="small">{{ f.arrival_at.strftime('%d %b %Y %H:%M') if f.arrival_at else '—' }}</td>
-            <td><span class="badge {% if f.is_return %}bg-info text-dark{% else %}bg-success{% endif %}">
-              {{ 'Return' if f.is_return else 'Outbound' }}</span>
-            </td>
-            <td>
-              <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/delete">
-                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"
-                        data-confirm="Remove this flight?">&times;</button>
-              </form>
-            </td>
-          </tr>
+          {% for f in root_flights %}
+            {{ render_flight(f, 0) }}
           {% endfor %}
         </tbody>
       </table>
@@ -123,42 +182,34 @@
       <div class="card-header bg-light fw-semibold small"><i class="bi bi-plus-lg me-1"></i>Add Flight</div>
       <div class="card-body">
         <form method="post" action="/trips/{{ trip.id }}/flights">
-          <div class="row g-2">
-            <div class="col-md-3">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small text-muted mb-1">Flight number</label>
               <input type="text" class="form-control form-control-sm" name="flight_number"
-                     placeholder="Flight no. (e.g. BA123)" maxlength="20">
+                     placeholder="e.g. BA123" maxlength="20" required
+                     style="text-transform:uppercase">
             </div>
             <div class="col-md-3">
-              <input type="text" class="form-control form-control-sm" name="airline"
-                     placeholder="Airline" maxlength="100">
+              <label class="form-label small text-muted mb-1">Departure date</label>
+              <input type="date" class="form-control form-control-sm" name="departure_date" required>
             </div>
             <div class="col-md-3">
-              <input type="text" class="form-control form-control-sm" name="departure_airport"
-                     placeholder="From (e.g. LHR)" maxlength="10" required
-                     pattern="[A-Za-z]{3,4}" style="text-transform:uppercase">
-            </div>
-            <div class="col-md-3">
-              <input type="text" class="form-control form-control-sm" name="arrival_airport"
-                     placeholder="To (e.g. BCN)" maxlength="10" required
-                     pattern="[A-Za-z]{3,4}" style="text-transform:uppercase">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label small text-muted mb-1">Departure</label>
-              <input type="datetime-local" class="form-control form-control-sm" name="departure_at">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label small text-muted mb-1">Arrival</label>
-              <input type="datetime-local" class="form-control form-control-sm" name="arrival_at">
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-              <div class="form-check mt-1">
-                <input type="checkbox" class="form-check-input" id="is_return" name="is_return">
-                <label class="form-check-label small" for="is_return">Return flight</label>
+              <label class="form-label small text-muted mb-1">Direction</label>
+              <div class="btn-group w-100" role="group" aria-label="Flight direction">
+                <input type="radio" class="btn-check" name="is_return" id="dir_outward" value="" checked>
+                <label class="btn btn-sm btn-outline-secondary" for="dir_outward">
+                  <i class="bi bi-arrow-right me-1"></i>Outward
+                </label>
+                <input type="radio" class="btn-check" name="is_return" id="dir_return" value="on">
+                <label class="btn btn-sm btn-outline-secondary" for="dir_return">
+                  <i class="bi bi-arrow-left me-1"></i>Return
+                </label>
               </div>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
-              <button type="submit" class="btn btn-sm btn-primary w-100">
-                <i class="bi bi-plus-lg me-1"></i>Add Flight
+            <div class="col-md-2">
+              <label class="form-label small text-muted mb-1 invisible">Add</label>
+              <button type="submit" class="btn btn-sm btn-primary w-100 d-block">
+                <i class="bi bi-search me-1"></i>Look up &amp; Add
               </button>
             </div>
           </div>

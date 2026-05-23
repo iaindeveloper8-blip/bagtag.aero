@@ -52,6 +52,30 @@ async def lifespan(app: FastAPI):
             )
         )
 
+        # Add receipt columns to bag
+        result = await conn.execute(text("PRAGMA table_info(bag)"))
+        bag_cols = [row[1] for row in result.fetchall()]
+        if "receipt_filename" not in bag_cols:
+            await conn.execute(text("ALTER TABLE bag ADD COLUMN receipt_filename VARCHAR(200)"))
+        if "receipt_original_filename" not in bag_cols:
+            await conn.execute(
+                text("ALTER TABLE bag ADD COLUMN receipt_original_filename VARCHAR(200)")
+            )
+
+        # Add is_cancelled and rerouted_from_id to flight
+        result = await conn.execute(text("PRAGMA table_info(flight)"))
+        flight_cols = [row[1] for row in result.fetchall()]
+        if "is_cancelled" not in flight_cols:
+            await conn.execute(
+                text("ALTER TABLE flight ADD COLUMN is_cancelled BOOLEAN NOT NULL DEFAULT 0")
+            )
+        if "rerouted_from_id" not in flight_cols:
+            await conn.execute(
+                text(
+                    "ALTER TABLE flight ADD COLUMN rerouted_from_id INTEGER REFERENCES flight(id) ON DELETE SET NULL"
+                )
+            )
+
     async with SessionFactory() as db:
         from src.packing.seed import seed_default_templates
 

@@ -51,9 +51,24 @@ class Flight(Base):
     departure_at: Mapped[datetime | None] = mapped_column(DateTime)
     arrival_at: Mapped[datetime | None] = mapped_column(DateTime)
     is_return: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
+    rerouted_from_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("flight.id", ondelete="SET NULL"), nullable=True
+    )
     notes: Mapped[str | None] = mapped_column(Text)
 
     trip: Mapped["Trip"] = relationship("Trip", back_populates="flights")
+    reroutings: Mapped[list["Flight"]] = relationship(
+        "Flight",
+        back_populates="rerouted_from",
+        foreign_keys=[rerouted_from_id],
+    )
+    rerouted_from: Mapped["Flight | None"] = relationship(
+        "Flight",
+        back_populates="reroutings",
+        foreign_keys=[rerouted_from_id],
+        remote_side=[id],
+    )
 
 
 class TripBag(Base):

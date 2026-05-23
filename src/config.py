@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR}/bagtag.db"
     UPLOAD_DIR: Path = BASE_DIR / "static" / "uploads"
     MAX_UPLOAD_SIZE_MB: int = 10
+    FLIGHTRADAR24_API_KEY: str | None = None
 
 
 settings = Settings()
