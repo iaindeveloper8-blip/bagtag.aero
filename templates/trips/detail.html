@@ -191,7 +191,8 @@
             </div>
             <div class="col-md-3">
               <label class="form-label small text-muted mb-1">Departure date</label>
-              <input type="date" class="form-control form-control-sm" name="departure_date" required>
+              <input type="date" class="form-control form-control-sm" name="departure_date"
+                     id="flight-departure-date" required>
             </div>
             <div class="col-md-3">
               <label class="form-label small text-muted mb-1">Direction</label>
@@ -462,6 +463,29 @@
 
 {% block scripts %}
 <script>
+  // Pre-fill flight departure date from trip dates based on direction
+  (function () {
+    const outwardDefault = "{{ trip.departure_date.isoformat() if trip.departure_date else '' }}";
+    const returnDefault  = "{{ trip.return_date.isoformat() if trip.return_date else '' }}";
+    const dateInput = document.getElementById('flight-departure-date');
+    const radios    = document.querySelectorAll('#tab-flights input[name="is_return"]');
+    if (!dateInput) return;
+
+    function tripDefault() {
+      const checked = document.querySelector('#tab-flights input[name="is_return"]:checked');
+      return checked && checked.value === 'on' ? returnDefault : outwardDefault;
+    }
+
+    dateInput.value = tripDefault();
+
+    radios.forEach(r => r.addEventListener('change', () => {
+      // Only update if the value still matches one of the two trip defaults
+      if (!dateInput.value || dateInput.value === outwardDefault || dateInput.value === returnDefault) {
+        dateInput.value = tripDefault();
+      }
+    }));
+  })();
+
   // Inline pack toggle — no page reload
   document.querySelectorAll('.pack-toggle').forEach(cb => {
     cb.addEventListener('change', async () => {

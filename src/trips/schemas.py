@@ -9,8 +9,8 @@ class TripCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     trip_type: TripType | None = None
     description: str | None = None
-    departure_date: date | None = None
-    return_date: date | None = None
+    departure_date: date
+    return_date: date
 
 
 class TripUpdate(TripCreate):

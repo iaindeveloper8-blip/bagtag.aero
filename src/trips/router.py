@@ -49,25 +49,19 @@ async def create_trip(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     name: Annotated[str, Form()],
+    departure_date: Annotated[str, Form()],
+    return_date: Annotated[str, Form()],
     trip_type: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
-    departure_date: Annotated[str | None, Form()] = None,
-    return_date: Annotated[str | None, Form()] = None,
 ):
     from datetime import date as _date
-
-    def _parse_date(v: str | None):
-        try:
-            return _date.fromisoformat(v) if v and v.strip() else None
-        except ValueError:
-            return None
 
     data = TripCreate(
         name=name,
         trip_type=trip_type or None,
         description=description or None,
-        departure_date=_parse_date(departure_date),
-        return_date=_parse_date(return_date),
+        departure_date=_date.fromisoformat(departure_date),
+        return_date=_date.fromisoformat(return_date),
     )
     trip = await trip_service.create_trip(db, user.id, data)
     return RedirectResponse(
@@ -119,25 +113,19 @@ async def update_trip(
     trip: OwnedTrip,
     db: Annotated[AsyncSession, Depends(get_db)],
     name: Annotated[str, Form()],
+    departure_date: Annotated[str, Form()],
+    return_date: Annotated[str, Form()],
     trip_type: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
-    departure_date: Annotated[str | None, Form()] = None,
-    return_date: Annotated[str | None, Form()] = None,
 ):
     from datetime import date as _date
-
-    def _parse_date(v: str | None):
-        try:
-            return _date.fromisoformat(v) if v and v.strip() else None
-        except ValueError:
-            return None
 
     data = TripUpdate(
         name=name,
         trip_type=trip_type or None,
         description=description or None,
-        departure_date=_parse_date(departure_date),
-        return_date=_parse_date(return_date),
+        departure_date=_date.fromisoformat(departure_date),
+        return_date=_date.fromisoformat(return_date),
     )
     await trip_service.update_trip(db, trip, data)
     return RedirectResponse(

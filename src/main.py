@@ -134,10 +134,26 @@ async def dashboard(
     bag_count = (await db.execute(select(func.count()).where(Bag.user_id == user.id))).scalar()
     trip_count = (await db.execute(select(func.count()).where(Trip.user_id == user.id))).scalar()
 
+    today = date.today()
+
+    from src.trips.models import Flight
+
+    current_trips_result = await db.execute(
+        select(Trip)
+        .where(
+            Trip.user_id == user.id,
+            Trip.departure_date <= today,
+            Trip.return_date >= today,
+        )
+        .options(selectinload(Trip.flights).selectinload(Flight.reroutings))
+        .order_by(Trip.departure_date.asc())
+    )
+    current_trips = list(current_trips_result.scalars().all())
+
     upcoming_result = await db.execute(
         select(Trip)
-        .where(Trip.user_id == user.id, Trip.departure_date >= date.today())
-        .options(selectinload(Trip.flights))
+        .where(Trip.user_id == user.id, Trip.departure_date > today)
+        .options(selectinload(Trip.flights).selectinload(Flight.reroutings))
         .order_by(Trip.departure_date.asc())
         .limit(3)
     )
@@ -150,6 +166,7 @@ async def dashboard(
             "user": user,
             "bag_count": bag_count,
             "trip_count": trip_count,
+            "current_trips": current_trips,
             "upcoming_trips": upcoming_trips,
         },
     )

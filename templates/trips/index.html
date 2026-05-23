@@ -38,12 +38,30 @@
         </p>
         {% endif %}
 
-        {% if trip.flights %}
+        {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
+        {% if root_flights %}
         <div class="d-flex flex-wrap gap-1 mb-2">
-          {% for flight in trip.flights %}
-          <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">
-            <i class="bi bi-airplane me-1"></i>{{ flight.departure_airport }} → {{ flight.arrival_airport }}
-          </span>
+          {% for f in root_flights %}
+            {% if f.is_cancelled %}
+            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+              <i class="bi bi-x-circle me-1"></i><s>{{ f.departure_airport }} → {{ f.arrival_airport }}</s>
+            </span>
+            {% for r in f.reroutings %}
+              {% if r.is_cancelled %}
+              <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+                <i class="bi bi-x-circle me-1"></i><s>{{ r.departure_airport }} → {{ r.arrival_airport }}</s>
+              </span>
+              {% else %}
+              <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small">
+                <i class="bi bi-arrow-return-right me-1"></i>{{ r.departure_airport }} → {{ r.arrival_airport }}
+              </span>
+              {% endif %}
+            {% endfor %}
+            {% else %}
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">
+              <i class="bi bi-airplane me-1"></i>{{ f.departure_airport }} → {{ f.arrival_airport }}
+            </span>
+            {% endif %}
           {% endfor %}
         </div>
         {% endif %}

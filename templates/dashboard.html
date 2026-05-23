@@ -48,6 +48,63 @@
   </div>
 </div>
 
+<!-- Current trips -->
+{% if current_trips %}
+<h2 class="h5 mb-3"><i class="bi bi-airplane-fill me-2 text-success"></i>Current Trip{{ 's' if current_trips | length > 1 }}</h2>
+<div class="row g-3 mb-4">
+  {% for trip in current_trips %}
+  <div class="col-12">
+    <div class="card border-success">
+      <div class="card-body">
+        <div class="d-flex align-items-start gap-3 flex-wrap">
+          <div class="flex-grow-1">
+            <h5 class="card-title mb-1">
+              <a href="/trips/{{ trip.id }}" class="text-decoration-none text-dark">{{ trip.name }}</a>
+              <span class="badge bg-success ms-2 align-middle" style="font-size:.65rem">In progress</span>
+            </h5>
+            <p class="text-muted small mb-2">
+              <i class="bi bi-calendar3 me-1"></i>
+              {{ trip.departure_date.strftime('%d %b %Y') }} &rarr; {{ trip.return_date.strftime('%d %b %Y') }}
+            </p>
+            {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
+            {% if root_flights %}
+            <div class="d-flex flex-wrap gap-1">
+              {% for f in root_flights %}
+                {% if f.is_cancelled %}
+                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+                  <i class="bi bi-x-circle me-1"></i><s>{{ f.departure_airport }} &rarr; {{ f.arrival_airport }}</s>
+                </span>
+                {% for r in f.reroutings %}
+                  {% if r.is_cancelled %}
+                  <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+                    <i class="bi bi-x-circle me-1"></i><s>{{ r.departure_airport }} &rarr; {{ r.arrival_airport }}</s>
+                  </span>
+                  {% else %}
+                  <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small">
+                    <i class="bi bi-arrow-return-right me-1"></i>{{ r.departure_airport }} &rarr; {{ r.arrival_airport }}
+                  </span>
+                  {% endif %}
+                {% endfor %}
+                {% else %}
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">
+                  <i class="bi bi-airplane me-1"></i>{{ f.departure_airport }} &rarr; {{ f.arrival_airport }}
+                </span>
+                {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          <a href="/trips/{{ trip.id }}" class="btn btn-sm btn-success flex-shrink-0">
+            View Trip
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- Upcoming trips -->
 {% if upcoming_trips %}
 <h2 class="h5 mb-3"><i class="bi bi-calendar-check me-2 text-primary"></i>Upcoming Trips</h2>
@@ -59,19 +116,34 @@
         <h5 class="card-title mb-1">
           <a href="/trips/{{ trip.id }}" class="text-decoration-none text-dark">{{ trip.name }}</a>
         </h5>
-        {% if trip.departure_date %}
         <p class="text-muted small mb-2">
           <i class="bi bi-calendar3 me-1"></i>
-          {{ trip.departure_date.strftime('%d %b %Y') }}
-          {% if trip.return_date %} &rarr; {{ trip.return_date.strftime('%d %b %Y') }}{% endif %}
+          {{ trip.departure_date.strftime('%d %b %Y') }} &rarr; {{ trip.return_date.strftime('%d %b %Y') }}
         </p>
-        {% endif %}
-        {% if trip.flights %}
+        {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
+        {% if root_flights %}
         <div class="d-flex flex-wrap gap-1 mt-2">
-          {% for flight in trip.flights %}
-          <span class="badge bg-light text-dark border">
-            <i class="bi bi-airplane me-1"></i>{{ flight.departure_airport }} &rarr; {{ flight.arrival_airport }}
-          </span>
+          {% for f in root_flights %}
+            {% if f.is_cancelled %}
+            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+              <i class="bi bi-x-circle me-1"></i><s>{{ f.departure_airport }} &rarr; {{ f.arrival_airport }}</s>
+            </span>
+            {% for r in f.reroutings %}
+              {% if r.is_cancelled %}
+              <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+                <i class="bi bi-x-circle me-1"></i><s>{{ r.departure_airport }} &rarr; {{ r.arrival_airport }}</s>
+              </span>
+              {% else %}
+              <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small">
+                <i class="bi bi-arrow-return-right me-1"></i>{{ r.departure_airport }} &rarr; {{ r.arrival_airport }}
+              </span>
+              {% endif %}
+            {% endfor %}
+            {% else %}
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">
+              <i class="bi bi-airplane me-1"></i>{{ f.departure_airport }} &rarr; {{ f.arrival_airport }}
+            </span>
+            {% endif %}
           {% endfor %}
         </div>
         {% endif %}
@@ -83,7 +155,7 @@
   </div>
   {% endfor %}
 </div>
-{% else %}
+{% elif not current_trips %}
 <div class="card mb-4">
   <div class="card-body text-center py-5 text-muted">
     <i class="bi bi-airplane display-4 d-block mb-3 text-primary opacity-50"></i>

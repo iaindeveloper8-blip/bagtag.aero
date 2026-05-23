@@ -44,14 +44,14 @@
 
       <div class="row g-3 mb-3">
         <div class="col-md-6">
-          <label for="departure_date" class="form-label">Departure date</label>
+          <label for="departure_date" class="form-label">Departure date <span class="text-danger">*</span></label>
           <input type="date" class="form-control" id="departure_date" name="departure_date"
-                 value="{{ trip.departure_date.isoformat() if trip and trip.departure_date else '' }}">
+                 value="{{ trip.departure_date.isoformat() if trip and trip.departure_date else '' }}" required>
         </div>
         <div class="col-md-6">
-          <label for="return_date" class="form-label">Return date</label>
+          <label for="return_date" class="form-label">Return date <span class="text-danger">*</span></label>
           <input type="date" class="form-control" id="return_date" name="return_date"
-                 value="{{ trip.return_date.isoformat() if trip and trip.return_date else '' }}">
+                 value="{{ trip.return_date.isoformat() if trip and trip.return_date else '' }}" required>
         </div>
       </div>
 
