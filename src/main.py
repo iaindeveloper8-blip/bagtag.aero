@@ -47,7 +47,9 @@ async def lifespan(app: FastAPI):
             )
         # Backfill any rows still missing a token (covers both migration and edge cases)
         await conn.execute(
-            text("UPDATE bag SET public_token = lower(hex(randomblob(6))) WHERE public_token IS NULL")
+            text(
+                "UPDATE bag SET public_token = lower(hex(randomblob(6))) WHERE public_token IS NULL"
+            )
         )
 
     async with SessionFactory() as db:

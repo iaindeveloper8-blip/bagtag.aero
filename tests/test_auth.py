@@ -145,3 +145,82 @@ async def test_authenticated_dashboard(auth_client):
     resp = await auth_client.get("/dashboard")
     assert resp.status_code == 200
     assert "bagtag" in resp.text.lower()
+
+
+# ── Invalid / tampered cookies ───────────────────────────────────────────────
+
+
+async def test_invalid_token_cookie_redirects_to_login(anon_client):
+    """A garbage JWT in the cookie should redirect rather than 500."""
+    anon_client.cookies.set("access_token", "not.a.valid.jwt")
+    resp = await anon_client.get("/bags/", follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/auth/login" in resp.headers["location"]
+
+
+async def test_token_for_nonexistent_user_redirects_to_login(anon_client):
+    """A valid JWT for a user ID that doesn't exist should redirect."""
+    from src.auth import service as auth_service
+
+    token = auth_service.create_access_token(user_id=999999)
+    anon_client.cookies.set("access_token", token)
+    resp = await anon_client.get("/bags/", follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/auth/login" in resp.headers["location"]
+
+
+async def test_invalid_token_on_optional_route_shows_landing(anon_client):
+    """An invalid cookie on an OptionalUser route should still render (not crash)."""
+    anon_client.cookies.set("access_token", "garbage.token.value")
+    resp = await anon_client.get("/", follow_redirects=False)
+    assert resp.status_code == 200
+
+
+async def test_login_redirects_to_dashboard_on_external_next(anon_client, user, db):
+    """An external URL in 'next' must be silently replaced with '/' for safety."""
+    from sqlalchemy import update
+
+    from src.auth.models import User
+    from src.auth.service import _hash_password
+
+    hashed = _hash_password("SafePass1!")
+    await db.execute(update(User).where(User.id == user.id).values(hashed_password=hashed))
+    await db.commit()
+
+    resp = await anon_client.post(
+        "/auth/login",
+        data={
+            "username": user.username,
+            "password": "SafePass1!",
+            "next": "https://evil.com/steal",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert resp.headers["location"] == "/"
+
+
+async def test_login_inactive_user_rejected(anon_client, db):
+    """An inactive account must not be able to log in."""
+    from sqlalchemy import update
+
+    from src.auth import service as auth_service
+    from src.auth.models import User
+    from src.auth.schemas import UserCreate
+    from src.auth.service import _hash_password
+
+    inactive = await auth_service.create_user(
+        db,
+        UserCreate(username="inactiveuser", email="inactive@test.com", password="Password123!"),
+    )
+    pw = _hash_password("Password123!")
+    await db.execute(
+        update(User).where(User.id == inactive.id).values(hashed_password=pw, is_active=False)
+    )
+    await db.commit()
+
+    resp = await anon_client.post(
+        "/auth/login",
+        data={"username": "inactiveuser", "password": "Password123!", "next": "/"},
+    )
+    assert resp.status_code == 401

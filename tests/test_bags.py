@@ -2,6 +2,8 @@
 
 import itertools
 
+import pytest
+
 from src.bags import service as bag_service
 from src.bags.schemas import BagCreate
 from tests.conftest import TINY_JPEG
@@ -226,6 +228,55 @@ async def test_delete_image(auth_client, user, db):
     assert resp.status_code == 302
 
 
+async def test_delete_primary_image_promotes_next(auth_client, user, db):
+    """Deleting the primary image should promote the next image as primary."""
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    await bag_service.add_image(db, bag, _fake_upload("a.jpg"), description=None)
+    bag = await bag_service.get_bag(db, bag.id, user.id)
+    await bag_service.add_image(db, bag, _fake_upload("b.jpg"), description=None)
+    bag = await bag_service.get_bag(db, bag.id, user.id)
+
+    primary_id = next(i.id for i in bag.images if i.is_primary)
+    resp = await auth_client.post(
+        f"/bags/{bag.id}/images/{primary_id}/delete",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    bag = await bag_service.get_bag(db, bag.id, user.id)
+    assert any(i.is_primary for i in bag.images)
+
+
+async def test_delete_nonexistent_image_raises(user, db):
+    from src.bags.exceptions import ImageNotFound
+
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    bag = await bag_service.get_bag(db, bag.id, user.id)
+    with pytest.raises(ImageNotFound):
+        await bag_service.delete_image(db, bag, image_id=999999)
+
+
+async def test_set_primary_nonexistent_image_raises(user, db):
+    from src.bags.exceptions import ImageNotFound
+
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    bag = await bag_service.get_bag(db, bag.id, user.id)
+    with pytest.raises(ImageNotFound):
+        await bag_service.set_primary_image(db, bag, image_id=999999)
+
+
+async def test_upload_oversized_image_rejected(auth_client, user, db):
+    from src.config import settings
+
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    oversized = b"X" * (settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024 + 1)
+    resp = await auth_client.post(
+        f"/bags/{bag.id}/images",
+        files={"file": ("big.jpg", oversized, "image/jpeg")},
+        follow_redirects=False,
+    )
+    assert resp.status_code in {302, 413}
+
+
 async def test_set_primary_image(auth_client, user, db):
     bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
     await bag_service.add_image(db, bag, _fake_upload("a.jpg"), description=None)
@@ -235,6 +286,29 @@ async def test_set_primary_image(auth_client, user, db):
 
     resp = await auth_client.post(
         f"/bags/{bag.id}/images/{img2.id}/set-primary",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+
+
+# ── Invalid form inputs ───────────────────────────────────────────────────────
+
+
+async def test_create_bag_with_invalid_float_is_ignored(auth_client):
+    """Non-numeric values for float fields should be silently treated as None."""
+    resp = await auth_client.post(
+        "/bags/new",
+        data={"name": _bag_name(), "volume_liters": "not-a-number", "purchase_price": "abc"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+
+
+async def test_create_bag_with_invalid_date_is_ignored(auth_client):
+    """Unparseable date strings should be silently treated as None."""
+    resp = await auth_client.post(
+        "/bags/new",
+        data={"name": _bag_name(), "purchased_at": "not-a-date"},
         follow_redirects=False,
     )
     assert resp.status_code == 302

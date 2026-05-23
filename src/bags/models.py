@@ -32,7 +32,9 @@ class Bag(Base):
     has_wheels: Mapped[bool] = mapped_column(Boolean, default=False)  # W
 
     notes: Mapped[str | None] = mapped_column(Text)
-    public_token: Mapped[str | None] = mapped_column(String(12), unique=True, nullable=True, index=True)
+    public_token: Mapped[str | None] = mapped_column(
+        String(12), unique=True, nullable=True, index=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
