@@ -17,7 +17,7 @@ import src.notifications.models  # noqa: F401, E402
 import src.packing.models  # noqa: F401, E402
 import src.trips.models  # noqa: F401, E402
 from src.auth import router as auth_router
-from src.auth.dependencies import CurrentUser
+from src.auth.dependencies import CurrentUser, OptionalUser
 from src.bags import public_router as bags_public_router
 from src.bags import router as bags_router
 from src.bags.models import Bag
@@ -78,6 +78,13 @@ templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/")
+async def landing(request: Request, user: OptionalUser):
+    if user:
+        return RedirectResponse(url="/dashboard", status_code=302)
+    return templates.TemplateResponse(request=request, name="landing.html", context={})
+
+
+@app.get("/dashboard")
 async def dashboard(
     request: Request,
     user: CurrentUser,

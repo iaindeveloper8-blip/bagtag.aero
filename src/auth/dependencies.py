@@ -30,3 +30,22 @@ async def require_auth(
 
 
 CurrentUser = Annotated[User, Depends(require_auth)]
+
+
+async def optional_auth(
+    token: Annotated[str | None, Cookie(alias="access_token")] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+) -> User | None:
+    """Dependency for routes accessible to both guests and logged-in users."""
+    if not token:
+        return None
+    try:
+        payload = auth_service.decode_access_token(token)
+        user_id = int(payload["sub"])
+        user = await auth_service.get_user_by_id(db, user_id)
+        return user if user and user.is_active else None
+    except (InvalidCredentials, KeyError, ValueError):
+        return None
+
+
+OptionalUser = Annotated[User | None, Depends(optional_auth)]

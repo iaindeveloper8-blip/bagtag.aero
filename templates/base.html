@@ -39,7 +39,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
   <div class="container">
-    <a class="navbar-brand" href="/">
+    <a class="navbar-brand" href="{% if user is defined and user %}/dashboard{% else %}/{% endif %}">
       <i class="bi bi-luggage me-1"></i>bagtag<span class="dot">.</span>aero
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
@@ -92,7 +92,7 @@
       {% else %}
       <ul class="navbar-nav ms-auto">
         <li class="nav-item"><a class="nav-link" href="/auth/login">Sign in</a></li>
-        <li class="nav-item"><a class="nav-link btn btn-outline-light btn-sm ms-2 px-3" href="/auth/register">Register</a></li>
+        <li class="nav-item"><a class="nav-link" href="/auth/register">Register</a></li>
       </ul>
       {% endif %}
     </div>

@@ -129,13 +129,19 @@ async def test_protected_routes_redirect_unauthenticated(anon_client, path):
     assert "/auth/login" in resp.headers["location"]
 
 
-async def test_dashboard_redirects_unauthenticated(anon_client):
+async def test_landing_page_unauthenticated(anon_client):
     resp = await anon_client.get("/", follow_redirects=False)
+    assert resp.status_code == 200
+    assert "bagtag" in resp.text.lower()
+
+
+async def test_landing_redirects_authenticated(auth_client):
+    resp = await auth_client.get("/", follow_redirects=False)
     assert resp.status_code == 302
-    assert "/auth/login" in resp.headers["location"]
+    assert resp.headers["location"] == "/dashboard"
 
 
 async def test_authenticated_dashboard(auth_client):
-    resp = await auth_client.get("/")
+    resp = await auth_client.get("/dashboard")
     assert resp.status_code == 200
     assert "bagtag" in resp.text.lower()

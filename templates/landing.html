@@ -1,0 +1,402 @@
+{% extends "base_landing.html" %}
+{% block title %}bagtag.aero — know your bags, own your journey{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Hero ─────────────────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, #0a0e1a 0%, #0d2a5e 45%, #1a4fd8 75%, #0dcaf0 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding-top: 6rem;
+    padding-bottom: 4rem;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 60% 40%, rgba(13,202,240,.12) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 20% 70%, rgba(29,78,216,.25) 0%, transparent 60%);
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero h1 {
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1.08;
+    color: #fff;
+  }
+  .hero h1 .accent { color: #0dcaf0; }
+  .hero .lead {
+    font-size: 1.2rem;
+    color: rgba(255,255,255,.75);
+    max-width: 480px;
+    line-height: 1.6;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #e2e8f0;
+    padding: .25rem .75rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+    margin-bottom: 1.5rem;
+  }
+  .btn-hero-primary {
+    background: #0dcaf0;
+    color: #0a0e1a;
+    border: none;
+    padding: .75rem 2rem;
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: .5rem;
+    transition: background .2s, transform .15s;
+  }
+  .btn-hero-primary:hover {
+    background: #31d2f2;
+    transform: translateY(-1px);
+    color: #0a0e1a;
+  }
+  .btn-hero-secondary {
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.9);
+    border: 1px solid rgba(255,255,255,.2);
+    padding: .75rem 2rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: .5rem;
+    backdrop-filter: blur(4px);
+    transition: background .2s;
+  }
+  .btn-hero-secondary:hover {
+    background: rgba(255,255,255,.15);
+    color: #fff;
+  }
+
+  /* ── Hero card preview ─────────────────────────────────────── */
+  .hero-card {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 1.25rem;
+    backdrop-filter: blur(12px);
+    padding: 1.5rem;
+    color: #fff;
+  }
+  .stat-pill {
+    background: rgba(13,202,240,.15);
+    border: 1px solid rgba(13,202,240,.3);
+    color: #0dcaf0;
+    border-radius: .5rem;
+    padding: .6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 600;
+  }
+  .stat-pill .stat-number { font-size: 1.5rem; font-weight: 800; }
+
+  /* ── Features ──────────────────────────────────────────────── */
+  .features { background: #f8fafc; padding: 6rem 0; }
+  .feature-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 2rem;
+    height: 100%;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .feature-card:hover {
+    box-shadow: 0 8px 30px rgba(0,0,0,.1);
+    transform: translateY(-2px);
+  }
+  .feature-icon {
+    width: 3rem; height: 3rem;
+    border-radius: .75rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
+
+  /* ── How it works ──────────────────────────────────────────── */
+  .how-it-works { padding: 6rem 0; background: #fff; }
+  .step-number {
+    width: 2.5rem; height: 2.5rem; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1rem;
+    background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .step-connector {
+    width: 2px;
+    background: linear-gradient(to bottom, #0d6efd44, transparent);
+    margin: .25rem 0 .25rem 1.2rem;
+    height: 2.5rem;
+  }
+
+  /* ── CTA ───────────────────────────────────────────────────── */
+  .cta-section {
+    background: linear-gradient(135deg, #0a0e1a 0%, #0d2a5e 60%, #1a4fd8 100%);
+    padding: 6rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(13,202,240,.1) 0%, transparent 65%);
+  }
+
+  /* ── Footer ────────────────────────────────────────────────── */
+  .landing-footer {
+    background: #0a0e1a;
+    color: rgba(255,255,255,.45);
+    padding: 2rem 0;
+    font-size: .875rem;
+  }
+  .landing-footer a { color: rgba(255,255,255,.6); text-decoration: none; }
+  .landing-footer a:hover { color: #0dcaf0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero ──────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container hero-content">
+    <div class="row align-items-center gy-5">
+      <div class="col-lg-6">
+        <div class="hero-badge">
+          <i class="bi bi-stars"></i> Free to use — no credit card
+        </div>
+        <h1>Know your bags.<br><span class="accent">Own your journey.</span></h1>
+        <p class="lead mt-3 mb-4">
+          Track every piece of luggage with IATA-standard details, plan trips with packing lists,
+          and share a live bag page at the lost-luggage desk.
+        </p>
+        <div class="d-flex flex-wrap gap-3">
+          <a href="/auth/register" class="btn btn-hero-primary">
+            <i class="bi bi-person-plus-fill me-2"></i>Create free account
+          </a>
+          <a href="/auth/login" class="btn btn-hero-secondary">
+            Sign in
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-5 offset-lg-1 d-none d-lg-block">
+        <div class="hero-card">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-luggage-fill text-info fs-5"></i>
+            <span class="fw-semibold">My Bags</span>
+            <span class="ms-auto badge" style="background:rgba(13,202,240,.2);color:#0dcaf0">Active</span>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <div class="stat-pill">
+                <i class="bi bi-luggage"></i>
+                <div><div class="stat-number">3</div><div style="font-size:.7rem;opacity:.7">Bags tracked</div></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="stat-pill" style="background:rgba(29,78,216,.15);border-color:rgba(29,78,216,.3);color:#60a5fa">
+                <i class="bi bi-airplane"></i>
+                <div><div class="stat-number">2</div><div style="font-size:.7rem;opacity:.7">Upcoming trips</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,.05);border-radius:.75rem;padding:1rem">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-qr-code text-info"></i>
+              <span class="small fw-medium">Public bag link</span>
+            </div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.5);font-family:monospace">
+              bagtag.aero/b/<span style="color:#0dcaf0">a1b2c3</span>
+            </div>
+            <div class="mt-2 small" style="color:rgba(255,255,255,.5)">
+              Share this link with the airline's lost-luggage desk so staff can identify your bag.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────────────── -->
+<section class="features">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="fw-800 fs-1 fw-bold" style="letter-spacing:-1px">Everything you need<br>when a bag goes missing</h2>
+      <p class="text-muted mt-3 lead" style="max-width:520px;margin:auto">
+        Most travellers can't accurately describe their bag under pressure.
+        bagtag.aero fixes that.
+      </p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#eff6ff">
+            <i class="bi bi-luggage-fill text-primary"></i>
+          </div>
+          <h5 class="fw-bold mb-2">IATA bag profiles</h5>
+          <p class="text-muted mb-0">
+            Store colour, material, handle type, wheel type, size category, locks,
+            straps, and distinguishing marks — exactly what the desk will ask for.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#f0fdf4">
+            <i class="bi bi-airplane text-success"></i>
+          </div>
+          <h5 class="fw-bold mb-2">Trip &amp; flight tracking</h5>
+          <p class="text-muted mb-0">
+            Create trips, add flights, assign bags, and build a per-trip packing list.
+            Mark items packed as you go.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#fdf4ff">
+            <i class="bi bi-qr-code text-purple" style="color:#9333ea"></i>
+          </div>
+          <h5 class="fw-bold mb-2">Shareable QR codes</h5>
+          <p class="text-muted mb-0">
+            Every bag gets a unique public URL and a QR code you can print.
+            Staff — or anyone who finds it — can see the details without an account.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#fff7ed">
+            <i class="bi bi-list-check text-warning" style="color:#ea580c"></i>
+          </div>
+          <h5 class="fw-bold mb-2">Packing templates</h5>
+          <p class="text-muted mb-0">
+            Five ready-made packing lists (Weekend, Business, Beach, City Break,
+            Hiking) — clone and customise for any trip.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#f0f9ff">
+            <i class="bi bi-bell-fill text-info"></i>
+          </div>
+          <h5 class="fw-bold mb-2">Bag update notifications</h5>
+          <p class="text-muted mb-0">
+            Get in-app alerts when someone views your public bag page — useful when
+            your bag has been found and is being processed.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#fff1f2">
+            <i class="bi bi-image text-danger"></i>
+          </div>
+          <h5 class="fw-bold mb-2">Bag photos</h5>
+          <p class="text-muted mb-0">
+            Upload photos of your luggage so there's no ambiguity at the
+            lost-luggage desk or when proving ownership.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works ───────────────────────────────────────────── -->
+<section class="how-it-works">
+  <div class="container">
+    <div class="row align-items-center gy-5">
+      <div class="col-lg-5">
+        <h2 class="fw-bold fs-1" style="letter-spacing:-1px">Up and running<br>in three steps</h2>
+        <p class="text-muted lead mt-3">
+          No app to install, no subscription. Just a fast, private record of your bags.
+        </p>
+      </div>
+      <div class="col-lg-6 offset-lg-1">
+        <div class="d-flex gap-3 mb-2">
+          <div>
+            <div class="step-number">1</div>
+            <div class="step-connector"></div>
+          </div>
+          <div class="pb-3">
+            <h6 class="fw-bold mb-1">Register a free account</h6>
+            <p class="text-muted mb-0">Takes 30 seconds. No payment details needed.</p>
+          </div>
+        </div>
+        <div class="d-flex gap-3 mb-2">
+          <div>
+            <div class="step-number">2</div>
+            <div class="step-connector"></div>
+          </div>
+          <div class="pb-3">
+            <h6 class="fw-bold mb-1">Add your bags</h6>
+            <p class="text-muted mb-0">
+              Fill in the IATA fields and upload a photo. Takes a couple of minutes per bag.
+            </p>
+          </div>
+        </div>
+        <div class="d-flex gap-3">
+          <div>
+            <div class="step-number">3</div>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-1">Travel with confidence</h6>
+            <p class="text-muted mb-0">
+              Create a trip, assign your bags, and share the QR code with airline staff
+              if a bag goes missing.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ────────────────────────────────────────────────────── -->
+<section class="cta-section">
+  <div class="container text-center position-relative" style="z-index:1">
+    <h2 class="fw-bold text-white fs-1 mb-3" style="letter-spacing:-1px">
+      Ready to track your first bag?
+    </h2>
+    <p class="mb-4" style="color:rgba(255,255,255,.7);font-size:1.1rem;max-width:440px;margin:auto">
+      It's free, it takes two minutes, and it could save you hours at the lost-luggage desk.
+    </p>
+    <a href="/auth/register" class="btn btn-hero-primary btn-lg">
+      <i class="bi bi-person-plus-fill me-2"></i>Create your free account
+    </a>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────────────── -->
+<footer class="landing-footer">
+  <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <i class="bi bi-luggage me-1"></i>
+      <strong style="color:rgba(255,255,255,.7)">bagtag.aero</strong>
+      &mdash; your luggage, your journey
+    </div>
+    <div class="d-flex gap-4">
+      <a href="/auth/login">Sign in</a>
+      <a href="/auth/register">Register</a>
+    </div>
+  </div>
+</footer>
+
+{% endblock %}

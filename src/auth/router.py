@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(
     request: Request,
-    next: str = "/",
+    next: str = "/dashboard",
     error: str | None = None,
 ):
     return templates.TemplateResponse(
@@ -33,13 +33,13 @@ async def login(
     request: Request,
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
-    next: Annotated[str, Form()] = "/",
+    next: Annotated[str, Form()] = "/dashboard",
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     try:
         user = await auth_service.authenticate_user(db, username, password)
         token = auth_service.create_access_token(user.id)
-        redirect_to = unquote(next) if next else "/"
+        redirect_to = unquote(next) if next else "/dashboard"
         if not redirect_to.startswith("/"):
             redirect_to = "/"
         response = RedirectResponse(url=redirect_to, status_code=status.HTTP_302_FOUND)
