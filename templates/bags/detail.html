@@ -196,6 +196,17 @@
           <i class="bi bi-download me-1"></i>Download PNG
         </a>
       </div>
+      <div class="modal-footer justify-content-between">
+        <div class="text-muted small">
+          Regenerate if this link is receiving spam.
+        </div>
+        <form method="post" action="/bags/{{ bag.id }}/regenerate-token">
+          <button type="submit" class="btn btn-sm btn-outline-danger"
+                  data-confirm="Regenerate the public link? The old link will stop working immediately.">
+            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate link
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -207,7 +218,7 @@
   document.getElementById('qr-modal').addEventListener('show.bs.modal', function () {
     const container = document.getElementById('qr-canvas');
     if (container.querySelector('canvas')) return;
-    const url = window.location.origin + '/b/{{ bag.id }}';
+    const url = window.location.origin + '/b/{{ bag.public_token }}';
     document.getElementById('qr-url').textContent = url;
     new QRCode(container, {
       text: url,

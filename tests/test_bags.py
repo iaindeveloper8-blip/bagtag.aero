@@ -162,6 +162,32 @@ async def test_delete_bag(auth_client, user, db):
     assert gone.status_code == 404
 
 
+# ── Public token ─────────────────────────────────────────────────────────────
+
+
+async def test_bag_has_public_token(user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    assert bag.public_token is not None
+    assert len(bag.public_token) == 12
+
+
+async def test_regenerate_token_changes_token(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    old_token = bag.public_token
+    resp = await auth_client.post(f"/bags/{bag.id}/regenerate-token", follow_redirects=False)
+    assert resp.status_code == 302
+    await db.refresh(bag)
+    assert bag.public_token != old_token
+
+
+async def test_old_public_token_returns_404(auth_client, user, db):
+    bag = await bag_service.create_bag(db, user.id, BagCreate(name=_bag_name()))
+    old_token = bag.public_token
+    await auth_client.post(f"/bags/{bag.id}/regenerate-token")
+    resp = await auth_client.get(f"/b/{old_token}")
+    assert resp.status_code == 404
+
+
 # ── Images ───────────────────────────────────────────────────────────────────
 
 

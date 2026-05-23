@@ -16,14 +16,14 @@ router = APIRouter(tags=["public"])
 templates = Jinja2Templates(directory="templates")
 
 
-@router.get("/{bag_id}", response_class=HTMLResponse)
+@router.get("/{token}", response_class=HTMLResponse)
 async def public_bag(
     request: Request,
-    bag_id: int,
+    token: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        bag = await bag_service.get_public_bag(db, bag_id)
+        bag = await bag_service.get_public_bag(db, token)
     except BagNotFound:
         return templates.TemplateResponse(
             request=request,
@@ -31,7 +31,7 @@ async def public_bag(
             status_code=404,
             context={},
         )
-    flights = await bag_service.get_relevant_flights(db, bag_id)
+    flights = await bag_service.get_relevant_flights(db, bag.id)
     return templates.TemplateResponse(
         request=request,
         name="public/bag.html",
@@ -39,9 +39,9 @@ async def public_bag(
     )
 
 
-@router.post("/{bag_id}/updates")
+@router.post("/{token}/updates")
 async def submit_bag_update(
-    bag_id: int,
+    token: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     finder_name: Annotated[str, Form()],
     comment: Annotated[str, Form()],
@@ -49,9 +49,9 @@ async def submit_bag_update(
     longitude: Annotated[str | None, Form()] = None,
 ):
     try:
-        bag = await bag_service.get_public_bag(db, bag_id)
+        bag = await bag_service.get_public_bag(db, token)
     except BagNotFound:
-        return RedirectResponse(url=f"/b/{bag_id}", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url=f"/b/{token}", status_code=status.HTTP_302_FOUND)
 
     data = BagUpdateCreate(
         finder_name=finder_name.strip(),
@@ -59,7 +59,7 @@ async def submit_bag_update(
         latitude=float(latitude) if latitude and latitude.strip() else None,
         longitude=float(longitude) if longitude and longitude.strip() else None,
     )
-    bag_update = await bag_service.create_bag_update(db, bag_id, data)
+    bag_update = await bag_service.create_bag_update(db, bag.id, data)
 
     location_str = ""
     if data.latitude is not None and data.longitude is not None:
@@ -77,6 +77,6 @@ async def submit_bag_update(
     )
 
     return RedirectResponse(
-        url=f"/b/{bag_id}?success=Update+submitted+—+thank+you",
+        url=f"/b/{token}?success=Update+submitted+—+thank+you",
         status_code=status.HTTP_302_FOUND,
     )

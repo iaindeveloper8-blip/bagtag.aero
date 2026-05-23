@@ -42,7 +42,7 @@ async def get_bag(db: AsyncSession, bag_id: int, user_id: int) -> Bag:
 
 
 async def create_bag(db: AsyncSession, user_id: int, data: BagCreate) -> Bag:
-    bag = Bag(user_id=user_id, **data.model_dump())
+    bag = Bag(user_id=user_id, public_token=uuid.uuid4().hex[:12], **data.model_dump())
     db.add(bag)
     await db.commit()
     await db.refresh(bag)
@@ -142,15 +142,22 @@ async def set_primary_image(db: AsyncSession, bag: Bag, image_id: int) -> None:
     await db.commit()
 
 
-async def get_public_bag(db: AsyncSession, bag_id: int) -> Bag:
+async def get_public_bag(db: AsyncSession, token: str) -> Bag:
     result = await db.execute(
         select(Bag)
-        .where(Bag.id == bag_id)
+        .where(Bag.public_token == token)
         .options(selectinload(Bag.images), selectinload(Bag.updates))
     )
     bag = result.scalar_one_or_none()
     if not bag:
         raise BagNotFound()
+    return bag
+
+
+async def regenerate_public_token(db: AsyncSession, bag: Bag) -> Bag:
+    bag.public_token = uuid.uuid4().hex[:12]
+    await db.commit()
+    await db.refresh(bag)
     return bag
 
 

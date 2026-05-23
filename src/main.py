@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -36,6 +36,19 @@ async def lifespan(app: FastAPI):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Add public_token column to existing databases that pre-date this field
+        result = await conn.execute(text("PRAGMA table_info(bag)"))
+        existing_cols = [row[1] for row in result.fetchall()]
+        if "public_token" not in existing_cols:
+            await conn.execute(text("ALTER TABLE bag ADD COLUMN public_token VARCHAR(12)"))
+            await conn.execute(
+                text("CREATE UNIQUE INDEX IF NOT EXISTS ix_bag_public_token ON bag (public_token)")
+            )
+        # Backfill any rows still missing a token (covers both migration and edge cases)
+        await conn.execute(
+            text("UPDATE bag SET public_token = lower(hex(randomblob(6))) WHERE public_token IS NULL")
+        )
 
     async with SessionFactory() as db:
         from src.packing.seed import seed_default_templates

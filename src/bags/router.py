@@ -162,6 +162,18 @@ async def update_bag(
     )
 
 
+@router.post("/{bag_id}/regenerate-token")
+async def regenerate_token(
+    bag: OwnedBag,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await bag_service.regenerate_public_token(db, bag)
+    return RedirectResponse(
+        url=f"/bags/{bag.id}?success=Public+link+regenerated",
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
 @router.post("/{bag_id}/delete")
 async def delete_bag(
     bag: OwnedBag,
