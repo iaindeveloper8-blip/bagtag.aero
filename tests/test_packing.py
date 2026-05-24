@@ -1,6 +1,7 @@
 """Packing template and trip packing-list endpoint tests."""
 
 import itertools
+from datetime import date
 
 from src.packing import service as packing_service
 from src.packing.models import PackingTemplate
@@ -10,6 +11,9 @@ from src.trips.schemas import TripCreate
 
 _pk_uid = itertools.count(400)
 
+_DEP = date(2026, 8, 1)
+_RET = date(2026, 8, 14)
+
 
 def _tname():
     return f"Template {next(_pk_uid)}"
@@ -17,6 +21,10 @@ def _tname():
 
 def _trip_name():
     return f"Packing Trip {next(_pk_uid)}"
+
+
+def _new_trip(name: str | None = None) -> TripCreate:
+    return TripCreate(name=name or _trip_name(), departure_date=_DEP, return_date=_RET)
 
 
 # ── Default templates ─────────────────────────────────────────────────────────
@@ -225,7 +233,7 @@ async def test_delete_item_from_user_template(auth_client, user, db):
 
 
 async def test_add_item_to_packing_list(auth_client, user, db):
-    trip = await trip_service.create_trip(db, user.id, TripCreate(name=_trip_name()))
+    trip = await trip_service.create_trip(db, user.id, _new_trip())
     resp = await auth_client.post(
         f"/packing/trips/{trip.id}/items",
         data={"name": "Laptop charger", "category": "electronics", "quantity": "1"},
@@ -238,7 +246,7 @@ async def test_add_item_to_packing_list(auth_client, user, db):
 
 
 async def test_toggle_item_packed_returns_json(auth_client, user, db):
-    trip = await trip_service.create_trip(db, user.id, TripCreate(name=_trip_name()))
+    trip = await trip_service.create_trip(db, user.id, _new_trip())
     pl = await packing_service.get_packing_list(db, trip.id)
     from src.packing.schemas import PackingListItemCreate
 
@@ -258,7 +266,7 @@ async def test_toggle_item_packed_returns_json(auth_client, user, db):
 
 
 async def test_delete_packing_list_item(auth_client, user, db):
-    trip = await trip_service.create_trip(db, user.id, TripCreate(name=_trip_name()))
+    trip = await trip_service.create_trip(db, user.id, _new_trip())
     pl = await packing_service.get_packing_list(db, trip.id)
     from src.packing.schemas import PackingListItemCreate
 
@@ -277,7 +285,7 @@ async def test_delete_packing_list_item(auth_client, user, db):
 
 
 async def test_clone_template_to_trip(auth_client, user, db):
-    trip = await trip_service.create_trip(db, user.id, TripCreate(name=_trip_name()))
+    trip = await trip_service.create_trip(db, user.id, _new_trip())
 
     from sqlalchemy import select
 
@@ -300,7 +308,7 @@ async def test_clone_template_to_trip(auth_client, user, db):
 
 async def test_cloned_to_trip_items_keep_affiliate_urls(user, db):
     """Affiliate URLs must survive the clone-to-trip operation."""
-    trip = await trip_service.create_trip(db, user.id, TripCreate(name=_trip_name()))
+    trip = await trip_service.create_trip(db, user.id, _new_trip())
     pl = await packing_service.get_packing_list(db, trip.id)
 
     from sqlalchemy import select
@@ -322,7 +330,7 @@ async def test_cloned_to_trip_items_keep_affiliate_urls(user, db):
 
 async def test_user_added_items_have_no_affiliate_url(user, db):
     """Items added directly by the user must never have an affiliate URL."""
-    trip = await trip_service.create_trip(db, user.id, TripCreate(name=_trip_name()))
+    trip = await trip_service.create_trip(db, user.id, _new_trip())
     pl = await packing_service.get_packing_list(db, trip.id)
     from src.packing.schemas import PackingListItemCreate
 
