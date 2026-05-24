@@ -2,12 +2,14 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Column,
     Date,
     DateTime,
     Float,
     ForeignKey,
     Integer,
     String,
+    Table,
     Text,
     UniqueConstraint,
     func,
@@ -15,6 +17,15 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
+
+trip_checkin_flight = Table(
+    "trip_checkin_flight",
+    Base.metadata,
+    Column(
+        "checkin_id", Integer, ForeignKey("trip_checkin.id", ondelete="CASCADE"), primary_key=True
+    ),
+    Column("flight_id", Integer, ForeignKey("flight.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class Trip(Base):
@@ -97,6 +108,7 @@ class TripBag(Base):
     bag_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("bag.id", ondelete="CASCADE"), primary_key=True
     )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     trip: Mapped["Trip"] = relationship("Trip", back_populates="trip_bags")
     bag: Mapped["Bag"] = relationship("Bag", back_populates="trip_bags")  # type: ignore[name-defined]  # noqa: F821
@@ -114,6 +126,7 @@ class TripCheckin(Base):
     )
 
     trip: Mapped["Trip"] = relationship("Trip", back_populates="checkins")
+    flights: Mapped[list["Flight"]] = relationship("Flight", secondary=trip_checkin_flight)
     bag_checkins: Mapped[list["TripCheckinBag"]] = relationship(
         "TripCheckinBag", back_populates="checkin", cascade="all, delete-orphan"
     )

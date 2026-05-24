@@ -90,6 +90,11 @@
       <td style="padding-left:calc(0.5rem + {{ indent }}rem)">
         {% if depth > 0 %}<span class="text-muted me-1">↳</span>{% endif %}
         {% if f.flight_number %}<strong class="{% if f.is_cancelled %}text-decoration-line-through{% endif %}">{{ f.flight_number }}</strong>{% endif %}
+        {% if depth == 0 %}
+        <span class="badge {% if f.is_return %}bg-info text-dark{% else %}bg-success{% endif %} {% if f.is_cancelled %}opacity-50{% endif %} ms-1">
+          {{ 'Return' if f.is_return else 'Outward' }}
+        </span>
+        {% endif %}
         {% if f.airline %}<br><span class="text-muted small">{{ f.airline }}</span>{% endif %}
       </td>
       <td>
@@ -98,35 +103,27 @@
         </span>
       </td>
       <td class="small {% if f.is_cancelled %}text-muted{% endif %}">{{ f.departure_at.strftime('%d %b %Y %H:%M') if f.departure_at else '—' }}</td>
-      <td class="small {% if f.is_cancelled %}text-muted{% endif %}">{{ f.arrival_at.strftime('%d %b %Y %H:%M') if f.arrival_at else '—' }}</td>
-      <td>
-        <span class="badge {% if f.is_return %}bg-info text-dark{% else %}bg-success{% endif %} {% if f.is_cancelled %}opacity-50{% endif %}">
-          {{ 'Return' if f.is_return else 'Outbound' }}
-        </span>
-      </td>
-      <td>
-        {% if f.is_cancelled %}
-          <span class="badge bg-danger">Cancelled</span>
-        {% endif %}
-      </td>
+      <td class="small d-none d-md-table-cell {% if f.is_cancelled %}text-muted{% endif %}">{{ f.arrival_at.strftime('%d %b %Y %H:%M') if f.arrival_at else '—' }}</td>
       <td class="text-end">
         <div class="d-flex gap-1 justify-content-end flex-wrap">
           {% if f.is_cancelled %}
           <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/uncancel">
-            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1" title="Uncancel">
-              <i class="bi bi-arrow-counterclockwise"></i>
+            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Uncancel
             </button>
           </form>
           {% else %}
           <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/cancel">
-            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-1" title="Mark cancelled">
-              <i class="bi bi-x-circle"></i>
+            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2">
+              <i class="bi bi-x-circle me-1"></i>Cancel
             </button>
           </form>
           {% endif %}
           <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/delete">
-            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"
-                    data-confirm="Remove this flight?">&times;</button>
+            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
+                    data-confirm="Remove this flight?">
+              <i class="bi bi-trash me-1"></i>Remove
+            </button>
           </form>
         </div>
       </td>
@@ -138,7 +135,7 @@
 
     {% if f.is_cancelled %}
     <tr class="table-light">
-      <td colspan="7" style="padding-left:calc(0.5rem + {{ indent + 1.5 }}rem)">
+      <td colspan="5" style="padding-left:calc(0.5rem + {{ indent + 1.5 }}rem)">
         <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/reroutings"
               class="d-flex align-items-end gap-2 flex-wrap py-1">
           <div>
@@ -170,9 +167,7 @@
             <th>Flight</th>
             <th>Route</th>
             <th>Departure</th>
-            <th>Arrival</th>
-            <th>Type</th>
-            <th>Status</th>
+            <th class="d-none d-md-table-cell">Arrival</th>
             <th></th>
           </tr>
         </thead>
@@ -231,9 +226,19 @@
 
   <!-- ── Bags tab ─────────────────────────────────────────────────────── -->
   <div class="tab-pane fade" id="tab-bags">
-    {% if trip.trip_bags %}
+    {% set active_bags = trip.trip_bags | selectattr('is_active') | list %}
+    {% set inactive_bags = trip.trip_bags | rejectattr('is_active') | list %}
+
+    {% if cross_trip_checkin %}
+    <div class="alert alert-warning py-2 small mb-3">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      Active check-in on <a href="/trips/{{ cross_trip_checkin.trip.id }}?tab=bags" class="alert-link">{{ cross_trip_checkin.trip.name }}</a> — collect those bags before starting a new check-in.
+    </div>
+    {% endif %}
+
+    {% if active_bags %}
     <div class="row g-3 mb-4">
-      {% for tb in trip.trip_bags %}
+      {% for tb in active_bags %}
       <div class="col-6 col-md-4 col-lg-3">
         <div class="card h-100">
           {% if tb.bag.primary_image %}
@@ -266,8 +271,37 @@
       </div>
       {% endfor %}
     </div>
-    {% else %}
+    {% elif not inactive_bags %}
     <p class="text-muted mb-4">No bags assigned to this trip yet.</p>
+    {% endif %}
+
+    {% if inactive_bags %}
+    <div class="mb-4">
+      <h6 class="text-muted small text-uppercase fw-semibold mb-2">
+        <i class="bi bi-clock-history me-1"></i>Previously on this trip
+      </h6>
+      <div class="row g-2">
+        {% for tb in inactive_bags %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="card h-100 opacity-50">
+            {% if tb.bag.primary_image %}
+            <img src="/static/uploads/{{ tb.bag.primary_image.filename }}"
+                 class="card-img-top" style="height:80px;object-fit:cover;" alt="{{ tb.bag.name }}">
+            {% else %}
+            <div class="d-flex align-items-center justify-content-center bg-light" style="height:80px;">
+              <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.5rem"></i>
+            </div>
+            {% endif %}
+            <div class="card-body p-2">
+              <p class="small mb-0">
+                <a href="/bags/{{ tb.bag.id }}" class="text-decoration-none text-muted">{{ tb.bag.name }}</a>
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
     {% endif %}
 
     {% if available_bags %}
@@ -310,6 +344,15 @@
           <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
             <div>
               <span class="small fw-semibold">{{ ci.created_at.strftime('%d %b %Y %H:%M') }}</span>
+              {% if ci.flights %}
+              <div class="d-flex flex-wrap gap-1 mt-1">
+                {% for f in ci.flights %}
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle" style="font-size:.65rem">
+                  {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> · {% endif %}{{ f.departure_airport }}<i class="bi bi-arrow-right mx-1"></i>{{ f.arrival_airport }}
+                </span>
+                {% endfor %}
+              </div>
+              {% endif %}
               <div class="d-flex flex-wrap gap-1 mt-1">
                 {% for bc in ci_checked %}
                 {% if not bc.collected_at %}
@@ -363,6 +406,7 @@
 
   <!-- ── Packing list tab ─────────────────────────────────────────────── -->
   <div class="tab-pane fade" id="tab-packing">
+    {% set active_bag_ids = trip.trip_bags | selectattr('is_active') | map(attribute='bag_id') | list %}
     {% if trip.packing_list %}
     {% set pl = trip.packing_list %}
     {% set packed_count = pl.items | selectattr('is_packed') | list | length %}
@@ -428,10 +472,10 @@
         {% for item in cat_items %}
         <li class="list-group-item py-2 {% if item.is_packed %}packed-row{% endif %}" id="item-{{ item.id }}">
           <div class="d-flex align-items-center gap-2">
+            {% set bag_locked = item.bag_id and item.bag_id not in active_bag_ids %}
             <input type="checkbox" class="form-check-input flex-shrink-0 pack-toggle"
                    {% if item.is_packed %}checked{% endif %}
-                   data-url="/packing/trips/{{ trip.id }}/items/{{ item.id }}/toggle"
-                   title="Toggle packed">
+                   {% if bag_locked %}disabled title="Bag is not active on this trip"{% else %}data-url="/packing/trips/{{ trip.id }}/items/{{ item.id }}/toggle" title="Toggle packed"{% endif %}>
             <div class="flex-grow-1 min-w-0">
               <span class="fw-medium">{{ item.name }}</span>
               {% if item.quantity > 1 %}
@@ -449,12 +493,13 @@
               {% endif %}
             </div>
             <!-- Assign bag -->
-            {% if trip.trip_bags %}
+            {% set assignable_bags = trip.trip_bags | selectattr('is_active') | list %}
+            {% if assignable_bags %}
             <form method="post" action="/packing/trips/{{ trip.id }}/items/{{ item.id }}/assign-bag"
                   class="d-flex gap-1 hide-mobile">
               <select class="form-select form-select-sm" name="bag_id" style="width:auto;min-width:100px;font-size:.75rem">
                 <option value="">No bag</option>
-                {% for tb in trip.trip_bags %}
+                {% for tb in assignable_bags %}
                 <option value="{{ tb.bag.id }}" {% if item.bag_id == tb.bag.id %}selected{% endif %}>
                   {{ tb.bag.name }}
                 </option>

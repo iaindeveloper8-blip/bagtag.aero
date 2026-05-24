@@ -94,6 +94,14 @@ async def lifespan(app: FastAPI):
         # Drop obsolete flight_checkin table if it exists
         await conn.execute(text("DROP TABLE IF EXISTS flight_checkin"))
 
+        # Add is_active to trip_bag
+        result = await conn.execute(text("PRAGMA table_info(trip_bag)"))
+        trip_bag_active_cols = [row[1] for row in result.fetchall()]
+        if "is_active" not in trip_bag_active_cols:
+            await conn.execute(
+                text("ALTER TABLE trip_bag ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1")
+            )
+
         # Add outcome/PIR/resolution columns to trip_checkin_bag
         result = await conn.execute(text("PRAGMA table_info(trip_checkin_bag)"))
         tcb_cols = [row[1] for row in result.fetchall()]

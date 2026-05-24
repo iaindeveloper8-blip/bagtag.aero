@@ -89,6 +89,7 @@ async def trip_detail(
         and trip.departure_date <= today <= trip.return_date
     )
     active_checkin = trip_service.compute_active_checkin(trip)
+    cross_trip_checkin = await trip_service.get_cross_trip_active_checkin(db, user.id, trip.id)
     return templates.TemplateResponse(
         request=request,
         name="trips/detail.html",
@@ -100,6 +101,7 @@ async def trip_detail(
             "TRIP_TYPE_LABELS": TRIP_TYPE_LABELS,
             "is_in_progress": is_in_progress,
             "active_checkin": active_checkin,
+            "cross_trip_checkin": cross_trip_checkin,
         },
     )
 
@@ -325,11 +327,23 @@ async def checkin_page(
     request: Request,
     trip: OwnedTrip,
     user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     active_checkin = trip_service.compute_active_checkin(trip)
     bag_checkin_by_bag = (
         {bc.bag_id: bc for bc in active_checkin.bag_checkins} if active_checkin else {}
     )
+
+    available_flights = [f for f in trip.flights if not f.is_cancelled]
+    if active_checkin and active_checkin.flights:
+        selected_flight_ids = {f.id for f in active_checkin.flights}
+    else:
+        today = date.today()
+        default_is_return = bool(trip.return_date and today >= trip.return_date)
+        selected_flight_ids = {f.id for f in available_flights if f.is_return == default_is_return}
+
+    cross_trip_checkin = await trip_service.get_cross_trip_active_checkin(db, user.id, trip.id)
+
     return templates.TemplateResponse(
         request=request,
         name="trips/checkin.html",
@@ -338,6 +352,9 @@ async def checkin_page(
             "user": user,
             "active_checkin": active_checkin,
             "bag_checkin_by_bag": bag_checkin_by_bag,
+            "available_flights": available_flights,
+            "selected_flight_ids": selected_flight_ids,
+            "cross_trip_checkin": cross_trip_checkin,
         },
     )
 
@@ -352,6 +369,8 @@ async def save_checkin(
     checkin_data: dict[int, dict] = {}
 
     for tb in trip.trip_bags:
+        if not tb.is_active:
+            continue
         bag_id = tb.bag_id
         checkin_status = form.get(f"status_{bag_id}")
         if not checkin_status:
@@ -374,8 +393,10 @@ async def save_checkin(
             "weight_kg": weight_kg,
         }
 
+    flight_ids = [int(fid) for fid in form.getlist("flight_ids") if str(fid).isdigit()]
+
     active_checkin = trip_service.compute_active_checkin(trip)
-    checkin = await trip_service.save_checkin(db, trip, active_checkin, checkin_data)
+    checkin = await trip_service.save_checkin(db, trip, active_checkin, checkin_data, flight_ids)
 
     for tb in trip.trip_bags:
         receipt_file = form.get(f"receipt_{tb.bag_id}")

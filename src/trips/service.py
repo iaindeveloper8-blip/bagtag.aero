@@ -4,7 +4,7 @@ from pathlib import Path
 
 import aiofiles
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -42,6 +42,26 @@ def compute_active_checkin(trip: Trip) -> TripCheckin | None:
     return None
 
 
+async def get_cross_trip_active_checkin(
+    db: AsyncSession, user_id: int, this_trip_id: int
+) -> TripCheckin | None:
+    """Return an active check-in on any of the user's other trips, or None."""
+    result = await db.execute(
+        select(TripCheckin)
+        .join(Trip, Trip.id == TripCheckin.trip_id)
+        .where(Trip.user_id == user_id, TripCheckin.trip_id != this_trip_id)
+        .options(
+            selectinload(TripCheckin.bag_checkins),
+            selectinload(TripCheckin.trip),
+        )
+        .order_by(TripCheckin.created_at.desc())
+    )
+    for checkin in result.scalars().all():
+        if any(b.status == "checked_in" and not b.collected_at for b in checkin.bag_checkins):
+            return checkin
+    return None
+
+
 async def get_trips(db: AsyncSession, user_id: int) -> list[Trip]:
     result = await db.execute(
         select(Trip)
@@ -69,6 +89,7 @@ async def get_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
             selectinload(Trip.checkins)
             .selectinload(TripCheckin.bag_checkins)
             .selectinload(TripCheckinBag.damage_photos),
+            selectinload(Trip.checkins).selectinload(TripCheckin.flights),
             selectinload(Trip.packing_list)
             .selectinload(PackingList.items)
             .selectinload(PackingListItem.bag),
@@ -168,7 +189,13 @@ async def assign_bag(db: AsyncSession, trip: Trip, bag_id: int, user_id: int) ->
         await db.execute(select(Bag).where(Bag.id == bag_id, Bag.user_id == user_id))
     ).scalar_one_or_none():
         raise TripNotFound()
-    trip_bag = TripBag(trip_id=trip.id, bag_id=bag_id)
+    # Deactivate this bag on any other trip it's currently active on
+    await db.execute(
+        update(TripBag)
+        .where(TripBag.bag_id == bag_id, TripBag.trip_id != trip.id, TripBag.is_active.is_(True))
+        .values(is_active=False)
+    )
+    trip_bag = TripBag(trip_id=trip.id, bag_id=bag_id, is_active=True)
     db.add(trip_bag)
     await db.commit()
 
@@ -189,6 +216,7 @@ async def save_checkin(
     trip: Trip,
     active_checkin: TripCheckin | None,
     checkin_data: dict[int, dict],
+    flight_ids: list[int],
 ) -> TripCheckin:
     """Create a new check-in or update the active one."""
     now = datetime.utcnow()
@@ -201,6 +229,12 @@ async def save_checkin(
     else:
         checkin = active_checkin
         bag_checkins_by_bag = {b.bag_id: b for b in checkin.bag_checkins}
+
+    # Replace associated flights
+    valid_ids = {f.id for f in trip.flights}
+    chosen_ids = [fid for fid in flight_ids if fid in valid_ids]
+    flights_result = await db.execute(select(Flight).where(Flight.id.in_(chosen_ids)))
+    checkin.flights = list(flights_result.scalars().all())
 
     for bag_id, data in checkin_data.items():
         existing = bag_checkins_by_bag.get(bag_id)

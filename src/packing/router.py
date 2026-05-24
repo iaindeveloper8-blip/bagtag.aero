@@ -268,6 +268,13 @@ async def toggle_packed(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     packing_list = await packing_service.get_packing_list(db, trip.id)
+    item = next((i for i in packing_list.items if i.id == item_id), None)
+    if item is None:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if item.bag_id:
+        active_bag_ids = {tb.bag_id for tb in trip.trip_bags if tb.is_active}
+        if item.bag_id not in active_bag_ids:
+            return JSONResponse({"locked": True}, status_code=200)
     item = await packing_service.toggle_item_packed(db, packing_list, item_id)
     packed_count = sum(1 for i in packing_list.items if i.is_packed)
     total_count = len(packing_list.items)

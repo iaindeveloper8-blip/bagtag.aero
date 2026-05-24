@@ -19,16 +19,70 @@
   from your baggage receipt (the 10-digit code), and optionally the weight and a photo of the receipt.
 </p>
 
-{% if not trip.trip_bags %}
+{% set active_trip_bags = trip.trip_bags | selectattr('is_active') | list %}
+
+{% if cross_trip_checkin %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle me-1"></i>
+  You have an active check-in on <a href="/trips/{{ cross_trip_checkin.trip.id }}?tab=bags" class="alert-link">{{ cross_trip_checkin.trip.name }}</a>.
+  Consider collecting those bags first, but you can still proceed.
+</div>
+{% endif %}
+
+{% if not active_trip_bags %}
 <div class="alert alert-info">
-  <i class="bi bi-info-circle me-1"></i>No bags are assigned to this trip yet.
+  <i class="bi bi-info-circle me-1"></i>No active bags on this trip.
   <a href="/trips/{{ trip.id }}?tab=bags" class="alert-link">Assign bags</a> first.
 </div>
 {% else %}
 <form method="post" action="/trips/{{ trip.id }}/checkin" enctype="multipart/form-data">
 
+  {% if available_flights %}
+  {% set outward = available_flights | selectattr('is_return', 'equalto', false) | list %}
+  {% set return_ = available_flights | selectattr('is_return', 'equalto', true) | list %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h6 class="mb-3"><i class="bi bi-airplane me-2 text-primary"></i>Flights covered by this check-in</h6>
+      {% if outward %}
+      <div class="mb-2">
+        <div class="small text-muted fw-semibold mb-1">Outward</div>
+        {% for f in outward %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="flight_ids"
+                 value="{{ f.id }}" id="flight_{{ f.id }}"
+                 {% if f.id in selected_flight_ids %}checked{% endif %}>
+          <label class="form-check-label small" for="flight_{{ f.id }}">
+            {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> — {% endif %}
+            {{ f.departure_airport }} → {{ f.arrival_airport }}
+            {% if f.departure_at %}<span class="text-muted">{{ f.departure_at.strftime('%d %b %H:%M') }}</span>{% endif %}
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if return_ %}
+      <div>
+        <div class="small text-muted fw-semibold mb-1">Return</div>
+        {% for f in return_ %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="flight_ids"
+                 value="{{ f.id }}" id="flight_{{ f.id }}"
+                 {% if f.id in selected_flight_ids %}checked{% endif %}>
+          <label class="form-check-label small" for="flight_{{ f.id }}">
+            {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> — {% endif %}
+            {{ f.departure_airport }} → {{ f.arrival_airport }}
+            {% if f.departure_at %}<span class="text-muted">{{ f.departure_at.strftime('%d %b %H:%M') }}</span>{% endif %}
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="row g-3 mb-4">
-    {% for tb in trip.trip_bags %}
+    {% for tb in active_trip_bags %}
     {% set bag = tb.bag %}
     {% set bc = bag_checkin_by_bag.get(bag.id) %}
     {% set is_checked = bc and bc.status == 'checked_in' %}
