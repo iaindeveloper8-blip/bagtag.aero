@@ -12,3 +12,6 @@ lint:
     uv run ruff format --check .
     uv run ruff check .
     uv run bandit -r . -c pyproject.toml
+
+demo-data:
+    uv run python -m src.demo

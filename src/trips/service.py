@@ -19,6 +19,7 @@ from src.trips.models import (
     TripCheckin,
     TripCheckinBag,
     TripCheckinBagDamagePhoto,
+    trip_checkin_flight,
 )
 from src.trips.schemas import FlightCreate, TripCreate, TripUpdate
 
@@ -230,11 +231,15 @@ async def save_checkin(
         checkin = active_checkin
         bag_checkins_by_bag = {b.bag_id: b for b in checkin.bag_checkins}
 
-    # Replace associated flights
+    # Replace associated flights via the secondary table to avoid a lazy-load on the
+    # newly-flushed checkin (assigning to a M2M relationship triggers load of old rows).
     valid_ids = {f.id for f in trip.flights}
     chosen_ids = [fid for fid in flight_ids if fid in valid_ids]
-    flights_result = await db.execute(select(Flight).where(Flight.id.in_(chosen_ids)))
-    checkin.flights = list(flights_result.scalars().all())
+    await db.execute(
+        trip_checkin_flight.delete().where(trip_checkin_flight.c.checkin_id == checkin.id)
+    )
+    for fid in chosen_ids:
+        await db.execute(trip_checkin_flight.insert().values(checkin_id=checkin.id, flight_id=fid))
 
     for bag_id, data in checkin_data.items():
         existing = bag_checkins_by_bag.get(bag_id)
