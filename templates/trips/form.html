@@ -2,73 +2,100 @@
 {% block title %}{% if trip %}Edit {{ trip.name }}{% else %}New Trip{% endif %} — bagtag.aero{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/trips">Trips</a></li>
-    {% if trip %}
-    <li class="breadcrumb-item"><a href="/trips/{{ trip.id }}">{{ trip.name }}</a></li>
-    <li class="breadcrumb-item active">Edit</li>
-    {% else %}
-    <li class="breadcrumb-item active">New Trip</li>
-    {% endif %}
-  </ol>
-</nav>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/trips">Trips</a></li>
+      {% if trip %}
+        <li class="breadcrumb-item"><a href="/trips/{{ trip.id }}">{{ trip.name }}</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+      {% else %}
+        <li class="breadcrumb-item active">New Trip</li>
+      {% endif %}
+    </ol>
+  </nav>
 
-<h1 class="h3 mb-4">
-  <i class="bi bi-airplane me-2 text-primary"></i>
-  {% if trip %}Edit Trip{% else %}Plan a New Trip{% endif %}
-</h1>
+  <h1 class="h3 mb-4">
+    <i class="bi bi-airplane me-2 text-primary"></i>
+    {% if trip %}Edit Trip{% else %}Plan a New Trip{% endif %}
+  </h1>
 
-<div class="card">
-  <div class="card-body p-4">
-    <form method="post" action="{% if trip %}/trips/{{ trip.id }}/edit{% else %}/trips/new{% endif %}">
-      <div class="mb-3">
-        <label for="name" class="form-label">Trip name <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="name" name="name"
-               value="{{ trip.name if trip else '' }}" maxlength="200"
-               placeholder="e.g. Summer in Barcelona" required autofocus>
-      </div>
-
-      <div class="mb-3">
-        <label for="trip_type" class="form-label">Trip type</label>
-        <select class="form-select" id="trip_type" name="trip_type">
-          <option value="">— select —</option>
-          {% for tt in TripType %}
-          <option value="{{ tt.value }}"
-            {% if trip and trip.trip_type == tt.value %}selected{% endif %}>
-            {{ TRIP_TYPE_LABELS.get(tt.value, tt.value) }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <label for="departure_date" class="form-label">Departure date <span class="text-danger">*</span></label>
-          <input type="date" class="form-control" id="departure_date" name="departure_date"
-                 value="{{ trip.departure_date.isoformat() if trip and trip.departure_date else '' }}" required>
+  <div class="card">
+    <div class="card-body p-4">
+      <form method="post" action="{% if trip %}/trips/{{ trip.id }}/edit{% else %}/trips/new{% endif %}">
+        <div class="mb-3">
+          <label for="name" class="form-label">Trip name <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            id="name"
+            name="name"
+            value="{{ trip.name if trip else '' }}"
+            maxlength="200"
+            placeholder="e.g. Summer in Barcelona"
+            required
+            autofocus
+          />
         </div>
-        <div class="col-md-6">
-          <label for="return_date" class="form-label">Return date <span class="text-danger">*</span></label>
-          <input type="date" class="form-control" id="return_date" name="return_date"
-                 value="{{ trip.return_date.isoformat() if trip and trip.return_date else '' }}" required>
+
+        <div class="mb-3">
+          <label for="trip_type" class="form-label">Trip type</label>
+          <select class="form-select" id="trip_type" name="trip_type">
+            <option value="">— select —</option>
+            {% for tt in TripType %}
+              <option value="{{ tt.value }}" {% if trip and trip.trip_type == tt.value %}selected{% endif %}>
+                {{ TRIP_TYPE_LABELS.get(tt.value, tt.value) }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
-      </div>
 
-      <div class="mb-4">
-        <label for="description" class="form-label">Description</label>
-        <textarea class="form-control" id="description" name="description" rows="3"
-                  placeholder="Notes about this trip…">{{ trip.description or '' }}</textarea>
-      </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label for="departure_date" class="form-label">Departure date <span class="text-danger">*</span></label>
+            <input
+              type="date"
+              class="form-control"
+              id="departure_date"
+              name="departure_date"
+              value="{{ trip.departure_date.isoformat() if trip and trip.departure_date else '' }}"
+              required
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="return_date" class="form-label">Return date <span class="text-danger">*</span></label>
+            <input
+              type="date"
+              class="form-control"
+              id="return_date"
+              name="return_date"
+              value="{{ trip.return_date.isoformat() if trip and trip.return_date else '' }}"
+              required
+            />
+          </div>
+        </div>
 
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-check-lg me-1"></i>{% if trip %}Save Changes{% else %}Create Trip{% endif %}
-        </button>
-        <a href="{% if trip %}/trips/{{ trip.id }}{% else %}/trips{% endif %}"
-           class="btn btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
+        <div class="mb-4">
+          <label for="description" class="form-label">Description</label>
+          <textarea
+            class="form-control"
+            id="description"
+            name="description"
+            rows="3"
+            placeholder="Notes about this trip…"
+          >
+{{ trip.description or '' }}</textarea
+          >
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>{% if trip %}Save Changes{% else %}Create Trip{% endif %}
+          </button>
+          <a href="{% if trip %}/trips/{{ trip.id }}{% else %}/trips{% endif %}" class="btn btn-outline-secondary"
+            >Cancel</a
+          >
+        </div>
+      </form>
+    </div>
   </div>
-</div>
 {% endblock %}

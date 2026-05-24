@@ -2,231 +2,297 @@
 {% block title %}{% if bag %}Edit {{ bag.name }}{% else %}Add Bag{% endif %} — bagtag.aero{% endblock %}
 
 {% macro sel(name, options, current, label, hint='') %}
-<div class="mb-3">
-  <label for="{{ name }}" class="form-label">{{ label }}</label>
-  <select class="form-select" id="{{ name }}" name="{{ name }}">
-    <option value="">— select —</option>
-    {% for opt in options %}
-    <option value="{{ opt.value }}"
-      {% if current and current == opt.value %}selected{% endif %}>
-      {{ LABEL_MAP.get(opt.value, opt.value) }}
-    </option>
-    {% endfor %}
-  </select>
-  {% if hint %}<div class="form-text">{{ hint }}</div>{% endif %}
-</div>
+  <div class="mb-3">
+    <label for="{{ name }}" class="form-label">{{ label }}</label>
+    <select class="form-select" id="{{ name }}" name="{{ name }}">
+      <option value="">— select —</option>
+      {% for opt in options %}
+        <option value="{{ opt.value }}" {% if current and current == opt.value %}selected{% endif %}>
+          {{ LABEL_MAP.get(opt.value, opt.value) }}
+        </option>
+      {% endfor %}
+    </select>
+    {% if hint %}<div class="form-text">{{ hint }}</div>{% endif %}
+  </div>
 {% endmacro %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/bags">My Bags</a></li>
-    {% if bag %}
-    <li class="breadcrumb-item"><a href="/bags/{{ bag.id }}">{{ bag.name }}</a></li>
-    <li class="breadcrumb-item active">Edit</li>
-    {% else %}
-    <li class="breadcrumb-item active">Add Bag</li>
-    {% endif %}
-  </ol>
-</nav>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/bags">My Bags</a></li>
+      {% if bag %}
+        <li class="breadcrumb-item"><a href="/bags/{{ bag.id }}">{{ bag.name }}</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+      {% else %}
+        <li class="breadcrumb-item active">Add Bag</li>
+      {% endif %}
+    </ol>
+  </nav>
 
-<h1 class="h3 mb-4">
-  <i class="bi bi-luggage-fill me-2 text-primary"></i>
-  {% if bag %}Edit {{ bag.name }}{% else %}Add New Bag{% endif %}
-</h1>
+  <h1 class="h3 mb-4">
+    <i class="bi bi-luggage-fill me-2 text-primary"></i>
+    {% if bag %}Edit {{ bag.name }}{% else %}Add New Bag{% endif %}
+  </h1>
 
-<form method="post" enctype="multipart/form-data"
-      action="{% if bag %}/bags/{{ bag.id }}/edit{% else %}/bags/new{% endif %}">
-  <!-- Section 1: Basic Info -->
-  <div class="card mb-4">
-    <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i>Basic Information</div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-12">
-          <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" id="name" name="name"
-                 value="{{ bag.name if bag else '' }}" maxlength="200" required>
-          <div class="form-text">A memorable name for this bag, e.g. "Big Blue Samsonite"</div>
-        </div>
-        <div class="col-md-6">
-          <label for="brand" class="form-label">Brand / Make</label>
-          <input type="text" class="form-control" id="brand" name="brand"
-                 value="{{ bag.brand or '' }}" maxlength="100" placeholder="e.g. Samsonite">
-        </div>
-        <div class="col-md-6">
-          <label for="model" class="form-label">Model</label>
-          <input type="text" class="form-control" id="model" name="model"
-                 value="{{ bag.model or '' }}" maxlength="100" placeholder="e.g. Omni Max">
-        </div>
-        <div class="col-md-6">
-          <label for="volume_liters" class="form-label">Volume (L)</label>
-          <input type="number" class="form-control" id="volume_liters" name="volume_liters"
-                 value="{{ bag.volume_liters or '' }}" min="0" step="0.1">
-        </div>
-        <div class="col-md-6">
-          <label for="tare_weight_kg" class="form-label">Tare weight (kg)</label>
-          <input type="number" class="form-control" id="tare_weight_kg" name="tare_weight_kg"
-                 value="{{ bag.tare_weight_kg or '' }}" min="0" step="0.01">
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section 2: Purchase -->
-  <div class="card mb-4">
-    <div class="card-header fw-semibold"><i class="bi bi-receipt me-1"></i>Purchase</div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label for="purchased_at" class="form-label">Date purchased</label>
-          <input type="date" class="form-control" id="purchased_at" name="purchased_at"
-                 value="{{ bag.purchased_at.isoformat() if bag and bag.purchased_at else '' }}">
-        </div>
-        <div class="col-md-6">
-          <label for="purchase_price" class="form-label">Purchase price (£)</label>
-          <input type="number" class="form-control" id="purchase_price" name="purchase_price"
-                 value="{{ bag.purchase_price or '' }}" min="0" step="0.01">
-        </div>
-        <div class="col-12">
-          <label for="receipt" class="form-label">Receipt</label>
-          {% if bag and bag.receipt_filename %}
-          <div class="mb-2 d-flex align-items-center gap-2">
-            <i class="bi bi-paperclip text-muted"></i>
-            <a href="/static/uploads/{{ bag.receipt_filename }}" target="_blank" rel="noopener"
-               class="small">{{ bag.receipt_original_filename }}</a>
-            <span class="text-muted small">— upload a new file below to replace it</span>
+  <form
+    method="post"
+    enctype="multipart/form-data"
+    action="{% if bag %}/bags/{{ bag.id }}/edit{% else %}/bags/new{% endif %}"
+  >
+    <!-- Section 1: Basic Info -->
+    <div class="card mb-4">
+      <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i>Basic Information</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              id="name"
+              name="name"
+              value="{{ bag.name if bag else '' }}"
+              maxlength="200"
+              required
+            />
+            <div class="form-text">A memorable name for this bag, e.g. "Big Blue Samsonite"</div>
           </div>
-          {% endif %}
-          <input type="file" class="form-control" id="receipt" name="receipt"
-                 accept=".pdf,.jpg,.jpeg,.png,.webp">
-          <div class="form-text">PDF or image, max 10 MB</div>
+          <div class="col-md-6">
+            <label for="brand" class="form-label">Brand / Make</label>
+            <input
+              type="text"
+              class="form-control"
+              id="brand"
+              name="brand"
+              value="{{ bag.brand or '' }}"
+              maxlength="100"
+              placeholder="e.g. Samsonite"
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="model" class="form-label">Model</label>
+            <input
+              type="text"
+              class="form-control"
+              id="model"
+              name="model"
+              value="{{ bag.model or '' }}"
+              maxlength="100"
+              placeholder="e.g. Omni Max"
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="volume_liters" class="form-label">Volume (L)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="volume_liters"
+              name="volume_liters"
+              value="{{ bag.volume_liters or '' }}"
+              min="0"
+              step="0.1"
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="tare_weight_kg" class="form-label">Tare weight (kg)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="tare_weight_kg"
+              name="tare_weight_kg"
+              value="{{ bag.tare_weight_kg or '' }}"
+              min="0"
+              step="0.01"
+            />
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Section 3: IATA Identification -->
-  <div class="card mb-4">
-    <div class="card-header fw-semibold">
-      <i class="bi bi-tag me-1"></i>IATA Baggage Identification Chart
-      <span class="text-muted fw-normal small ms-2">Helps airline staff identify your bag</span>
+    <!-- Section 2: Purchase -->
+    <div class="card mb-4">
+      <div class="card-header fw-semibold"><i class="bi bi-receipt me-1"></i>Purchase</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="purchased_at" class="form-label">Date purchased</label>
+            <input
+              type="date"
+              class="form-control"
+              id="purchased_at"
+              name="purchased_at"
+              value="{{ bag.purchased_at.isoformat() if bag and bag.purchased_at else '' }}"
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="purchase_price" class="form-label">Purchase price (£)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="purchase_price"
+              name="purchase_price"
+              value="{{ bag.purchase_price or '' }}"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div class="col-12">
+            <label for="receipt" class="form-label">Receipt</label>
+            {% if bag and bag.receipt_filename %}
+              <div class="mb-2 d-flex align-items-center gap-2">
+                <i class="bi bi-paperclip text-muted"></i>
+                <a href="/static/uploads/{{ bag.receipt_filename }}" target="_blank" rel="noopener" class="small"
+                  >{{ bag.receipt_original_filename }}</a
+                >
+                <span class="text-muted small">— upload a new file below to replace it</span>
+              </div>
+            {% endif %}
+            <input type="file" class="form-control" id="receipt" name="receipt" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+            <div class="form-text">PDF or image, max 10 MB</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="card-body">
-      <div class="row g-3">
-        <!-- Colour -->
-        <div class="col-md-4">
-          {{ sel('color', BagColor, bag.color if bag else None, 'Colour') }}
-        </div>
 
-        <!-- Bag type — grouped by closing method -->
-        <div class="col-md-4">
-          <label for="bag_type" class="form-label">Bag type</label>
-          <select class="form-select" id="bag_type" name="bag_type">
-            <option value="">— select —</option>
-            <optgroup label="Closes without zippers">
-              {% for t in BagType %}
-              {% if t.value | int < 20 %}
-              <option value="{{ t.value }}"
-                {% if bag and bag.bag_type == t.value %}selected{% endif %}>
-                {{ t.value }} — {{ LABEL_MAP.get(t.value, t.value) }}
-              </option>
-              {% endif %}
+    <!-- Section 3: IATA Identification -->
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-tag me-1"></i>IATA Baggage Identification Chart
+        <span class="text-muted fw-normal small ms-2">Helps airline staff identify your bag</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- Colour -->
+          <div class="col-md-4">{{ sel('color', BagColor, bag.color if bag else None, 'Colour') }}</div>
+
+          <!-- Bag type — grouped by closing method -->
+          <div class="col-md-4">
+            <label for="bag_type" class="form-label">Bag type</label>
+            <select class="form-select" id="bag_type" name="bag_type">
+              <option value="">— select —</option>
+              <optgroup label="Closes without zippers">
+                {% for t in BagType %}
+                  {% if t.value | int < 20 %}
+                    <option value="{{ t.value }}" {% if bag and bag.bag_type == t.value %}selected{% endif %}>
+                      {{ t.value }} — {{ LABEL_MAP.get(t.value, t.value) }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Closes with zippers">
+                {% for t in BagType %}
+                  {% if t.value | int >= 20 %}
+                    <option value="{{ t.value }}" {% if bag and bag.bag_type == t.value %}selected{% endif %}>
+                      {{ t.value }} — {{ LABEL_MAP.get(t.value, t.value) }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Material -->
+          <div class="col-md-4">
+            <label for="material" class="form-label">Material</label>
+            <select class="form-select" id="material" name="material">
+              <option value="" {% if not bag or not bag.material %}selected{% endif %}>Soft (default)</option>
+              {% for m in BagMaterial %}
+                <option value="{{ m.value }}" {% if bag and bag.material == m.value %}selected{% endif %}>
+                  {{ LABEL_MAP.get(m.value, m.value) }}
+                </option>
               {% endfor %}
-            </optgroup>
-            <optgroup label="Closes with zippers">
-              {% for t in BagType %}
-              {% if t.value | int >= 20 %}
-              <option value="{{ t.value }}"
-                {% if bag and bag.bag_type == t.value %}selected{% endif %}>
-                {{ t.value }} — {{ LABEL_MAP.get(t.value, t.value) }}
-              </option>
-              {% endif %}
-              {% endfor %}
-            </optgroup>
-          </select>
-        </div>
+            </select>
+          </div>
 
-        <!-- Material -->
-        <div class="col-md-4">
-          <label for="material" class="form-label">Material</label>
-          <select class="form-select" id="material" name="material">
-            <option value=""{% if not bag or not bag.material %} selected{% endif %}>Soft (default)</option>
-            {% for m in BagMaterial %}
-            <option value="{{ m.value }}"
-              {% if bag and bag.material == m.value %}selected{% endif %}>
-              {{ LABEL_MAP.get(m.value, m.value) }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
+          <!-- Basic element: cabin size (K) -->
+          <div class="col-12">
+            <label class="form-label d-block">Basic elements</label>
+            <div class="form-check form-check-inline">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="is_cabin_size"
+                name="is_cabin_size"
+                {% if bag and bag.is_cabin_size %}checked{% endif %}
+              />
+              <label class="form-check-label" for="is_cabin_size"> <strong>K</strong> — Cabin size </label>
+            </div>
+          </div>
 
-        <!-- Basic element: cabin size (K) -->
-        <div class="col-12">
-          <label class="form-label d-block">Basic elements</label>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="is_cabin_size" name="is_cabin_size"
-                   {% if bag and bag.is_cabin_size %}checked{% endif %}>
-            <label class="form-check-label" for="is_cabin_size">
-              <strong>K</strong> — Cabin size
+          <!-- External elements: C H S W (X is implied when none selected) -->
+          <div class="col-12">
+            <label class="form-label d-block">
+              External elements
+              <span class="text-muted fw-normal">(X — no external elements — is implied when none are selected)</span>
             </label>
-          </div>
-        </div>
-
-        <!-- External elements: C H S W (X is implied when none selected) -->
-        <div class="col-12">
-          <label class="form-label d-block">
-            External elements
-            <span class="text-muted fw-normal">(X — no external elements — is implied when none are selected)</span>
-          </label>
-          <div class="d-flex flex-wrap gap-3">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="has_combination_lock" name="has_combination_lock"
-                     {% if bag and bag.has_combination_lock %}checked{% endif %}>
-              <label class="form-check-label" for="has_combination_lock">
-                <strong>C</strong> — Combination locks
-              </label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="has_retractable_handle" name="has_retractable_handle"
-                     {% if bag and bag.has_retractable_handle %}checked{% endif %}>
-              <label class="form-check-label" for="has_retractable_handle">
-                <strong>H</strong> — Retractable handles
-              </label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="has_closing_straps" name="has_closing_straps"
-                     {% if bag and bag.has_closing_straps %}checked{% endif %}>
-              <label class="form-check-label" for="has_closing_straps">
-                <strong>S</strong> — Straps to close / secure
-              </label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="has_wheels" name="has_wheels"
-                     {% if bag and bag.has_wheels %}checked{% endif %}>
-              <label class="form-check-label" for="has_wheels">
-                <strong>W</strong> — Wheels / rollers
-              </label>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="has_combination_lock"
+                  name="has_combination_lock"
+                  {% if bag and bag.has_combination_lock %}checked{% endif %}
+                />
+                <label class="form-check-label" for="has_combination_lock">
+                  <strong>C</strong> — Combination locks
+                </label>
+              </div>
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="has_retractable_handle"
+                  name="has_retractable_handle"
+                  {% if bag and bag.has_retractable_handle %}checked{% endif %}
+                />
+                <label class="form-check-label" for="has_retractable_handle">
+                  <strong>H</strong> — Retractable handles
+                </label>
+              </div>
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="has_closing_straps"
+                  name="has_closing_straps"
+                  {% if bag and bag.has_closing_straps %}checked{% endif %}
+                />
+                <label class="form-check-label" for="has_closing_straps">
+                  <strong>S</strong> — Straps to close / secure
+                </label>
+              </div>
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="has_wheels"
+                  name="has_wheels"
+                  {% if bag and bag.has_wheels %}checked{% endif %}
+                />
+                <label class="form-check-label" for="has_wheels"> <strong>W</strong> — Wheels / rollers </label>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Section 4: Notes -->
-  <div class="card mb-4">
-    <div class="card-header fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
-    <div class="card-body">
-      <textarea class="form-control" name="notes" rows="3"
-                placeholder="Anything else worth noting…">{{ bag.notes or '' }}</textarea>
+    <!-- Section 4: Notes -->
+    <div class="card mb-4">
+      <div class="card-header fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
+      <div class="card-body">
+        <textarea class="form-control" name="notes" rows="3" placeholder="Anything else worth noting…">
+{{ bag.notes or '' }}</textarea
+        >
+      </div>
     </div>
-  </div>
 
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary">
-      <i class="bi bi-check-lg me-1"></i>{% if bag %}Save Changes{% else %}Add Bag{% endif %}
-    </button>
-    <a href="{% if bag %}/bags/{{ bag.id }}{% else %}/bags{% endif %}" class="btn btn-outline-secondary">Cancel</a>
-  </div>
-</form>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg me-1"></i>{% if bag %}Save Changes{% else %}Add Bag{% endif %}
+      </button>
+      <a href="{% if bag %}/bags/{{ bag.id }}{% else %}/bags{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
 {% endblock %}

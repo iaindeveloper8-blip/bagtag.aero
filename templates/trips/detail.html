@@ -2,639 +2,772 @@
 {% block title %}{{ trip.name }} — bagtag.aero{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/trips">Trips</a></li>
-    <li class="breadcrumb-item active">{{ trip.name }}</li>
-  </ol>
-</nav>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/trips">Trips</a></li>
+      <li class="breadcrumb-item active">{{ trip.name }}</li>
+    </ol>
+  </nav>
 
-<div class="d-flex align-items-start mb-3 gap-3 flex-wrap">
-  <div class="flex-grow-1">
-    <h1 class="h3 mb-1">{{ trip.name }}</h1>
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      {% if trip.trip_type %}
-      <span class="badge bg-secondary">{{ TRIP_TYPE_LABELS.get(trip.trip_type, trip.trip_type) }}</span>
-      {% endif %}
-      {% if trip.departure_date %}
-      <span class="text-muted small">
-        <i class="bi bi-calendar3 me-1"></i>{{ trip.departure_date.strftime('%d %b %Y') }}
-        {% if trip.return_date %} → {{ trip.return_date.strftime('%d %b %Y') }}{% endif %}
-      </span>
-      {% endif %}
-    </div>
-  </div>
-  <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
-    {% if is_in_progress and trip.trip_bags %}
-    <a href="/trips/{{ trip.id }}/checkin" class="btn btn-sm btn-primary">
-      <i class="bi bi-tag me-1"></i>{{ 'Update Check In' if active_checkin else 'Check In Bags' }}
-    </a>
-    {% if active_checkin %}
-    <a href="/trips/{{ trip.id }}/collect" class="btn btn-sm btn-success">
-      <i class="bi bi-bag-check me-1"></i>Collect Bags
-    </a>
-    {% endif %}
-    {% endif %}
-    <a href="/trips/{{ trip.id }}/edit" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-pencil me-1"></i>Edit
-    </a>
-    <form method="post" action="/trips/{{ trip.id }}/delete">
-      <button type="submit" class="btn btn-sm btn-outline-danger"
-              data-confirm="Delete this trip and all its data?">
-        <i class="bi bi-trash me-1"></i>Delete
-      </button>
-    </form>
-  </div>
-</div>
-
-{% if trip.description %}
-<p class="text-muted mb-3">{{ trip.description }}</p>
-{% endif %}
-
-<!-- Tabs -->
-<ul class="nav nav-tabs mb-3" id="tripTabs">
-  <li class="nav-item">
-    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-flights">
-      <i class="bi bi-airplane me-1"></i>Flights
-      {% if trip.flights %}<span class="badge bg-secondary ms-1">{{ trip.flights | selectattr('rerouted_from_id', 'none') | list | length }}</span>{% endif %}
-    </button>
-  </li>
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-bags">
-      <i class="bi bi-luggage me-1"></i>Bags
-      {% if trip.trip_bags %}<span class="badge bg-secondary ms-1">{{ trip.trip_bags | length }}</span>{% endif %}
-    </button>
-  </li>
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-packing">
-      <i class="bi bi-list-check me-1"></i>Packing
-      {% if trip.packing_list %}
-      {% set packed = trip.packing_list.items | selectattr('is_packed') | list | length %}
-      {% set total = trip.packing_list.items | length %}
-      <span id="packing-tab-badge" class="badge bg-{% if packed == total and total > 0 %}success{% else %}secondary{% endif %} ms-1">
-        {{ packed }}/{{ total }}
-      </span>
-      {% endif %}
-    </button>
-  </li>
-</ul>
-
-<div class="tab-content">
-
-  <!-- ── Flights tab ──────────────────────────────────────────────────── -->
-  <div class="tab-pane fade show active" id="tab-flights">
-
-  {%- macro render_flight(f, depth) -%}
-    {%- set indent = depth * 1.5 -%}
-    <tr class="{% if f.is_cancelled %}table-danger{% endif %}">
-      <td style="padding-left:calc(0.5rem + {{ indent }}rem)">
-        {% if depth > 0 %}<span class="text-muted me-1">↳</span>{% endif %}
-        {% if f.flight_number %}<strong class="{% if f.is_cancelled %}text-decoration-line-through{% endif %}">{{ f.flight_number }}</strong>{% endif %}
-        {% if depth == 0 %}
-        <span class="badge {% if f.is_return %}bg-info text-dark{% else %}bg-success{% endif %} {% if f.is_cancelled %}opacity-50{% endif %} ms-1">
-          {{ 'Return' if f.is_return else 'Outward' }}
-        </span>
+  <div class="d-flex align-items-start mb-3 gap-3 flex-wrap">
+    <div class="flex-grow-1">
+      <h1 class="h3 mb-1">{{ trip.name }}</h1>
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        {% if trip.trip_type %}
+          <span class="badge bg-secondary">{{ TRIP_TYPE_LABELS.get(trip.trip_type, trip.trip_type) }}</span>
         {% endif %}
-        {% if f.airline %}<br><span class="text-muted small">{{ f.airline }}</span>{% endif %}
-      </td>
-      <td>
-        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle {% if f.is_cancelled %}opacity-50{% endif %}">
-          {{ f.departure_airport }} <i class="bi bi-arrow-right"></i> {{ f.arrival_airport }}
-        </span>
-      </td>
-      <td class="small {% if f.is_cancelled %}text-muted{% endif %}">{{ f.departure_at.strftime('%d %b %Y %H:%M') if f.departure_at else '—' }}</td>
-      <td class="small d-none d-md-table-cell {% if f.is_cancelled %}text-muted{% endif %}">{{ f.arrival_at.strftime('%d %b %Y %H:%M') if f.arrival_at else '—' }}</td>
-      <td class="text-end">
-        <div class="d-flex gap-1 justify-content-end flex-wrap">
-          {% if f.is_cancelled %}
-          <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/uncancel">
-            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2">
-              <i class="bi bi-arrow-counterclockwise me-1"></i>Uncancel
-            </button>
-          </form>
-          {% else %}
-          <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/cancel">
-            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2">
-              <i class="bi bi-x-circle me-1"></i>Cancel
-            </button>
-          </form>
-          {% endif %}
-          <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/delete">
-            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
-                    data-confirm="Remove this flight?">
-              <i class="bi bi-trash me-1"></i>Remove
-            </button>
-          </form>
-        </div>
-      </td>
-    </tr>
-
-    {%- for r in f.reroutings -%}
-      {{ render_flight(r, depth + 1) }}
-    {%- endfor -%}
-
-    {% if f.is_cancelled %}
-    <tr class="table-light">
-      <td colspan="5" style="padding-left:calc(0.5rem + {{ indent + 1.5 }}rem)">
-        <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/reroutings"
-              class="d-flex align-items-end gap-2 flex-wrap py-1">
-          <div>
-            <label class="form-label small text-muted mb-1">Rerouting flight no.</label>
-            <input type="text" class="form-control form-control-sm" name="flight_number"
-                   placeholder="e.g. BA456" maxlength="20" required style="text-transform:uppercase;width:130px">
-          </div>
-          <div>
-            <label class="form-label small text-muted mb-1">Date</label>
-            <input type="date" class="form-control form-control-sm" name="departure_date" required style="width:140px">
-          </div>
-          <div class="align-self-end">
-            <button type="submit" class="btn btn-sm btn-primary">
-              <i class="bi bi-search me-1"></i>Look up &amp; Add rerouting
-            </button>
-          </div>
-        </form>
-      </td>
-    </tr>
-    {% endif %}
-  {%- endmacro -%}
-
-    {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
-    {% if root_flights %}
-    <div class="table-responsive mb-4">
-      <table class="table table-sm align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Flight</th>
-            <th>Route</th>
-            <th>Departure</th>
-            <th class="d-none d-md-table-cell">Arrival</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for f in root_flights %}
-            {{ render_flight(f, 0) }}
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p class="text-muted">No flights added yet.</p>
-    {% endif %}
-
-    <!-- Add flight form -->
-    <div class="card">
-      <div class="card-header bg-light fw-semibold small"><i class="bi bi-plus-lg me-1"></i>Add Flight</div>
-      <div class="card-body">
-        <form method="post" action="/trips/{{ trip.id }}/flights">
-          <div class="row g-2 align-items-end">
-            <div class="col-md-4">
-              <label class="form-label small text-muted mb-1">Flight number</label>
-              <input type="text" class="form-control form-control-sm" name="flight_number"
-                     placeholder="e.g. BA123" maxlength="20" required
-                     style="text-transform:uppercase">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label small text-muted mb-1">Departure date</label>
-              <input type="date" class="form-control form-control-sm" name="departure_date"
-                     id="flight-departure-date" required>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label small text-muted mb-1">Direction</label>
-              <div class="btn-group w-100" role="group" aria-label="Flight direction">
-                <input type="radio" class="btn-check" name="is_return" id="dir_outward" value="" checked>
-                <label class="btn btn-sm btn-outline-secondary" for="dir_outward">
-                  <i class="bi bi-arrow-right me-1"></i>Outward
-                </label>
-                <input type="radio" class="btn-check" name="is_return" id="dir_return" value="on">
-                <label class="btn btn-sm btn-outline-secondary" for="dir_return">
-                  <i class="bi bi-arrow-left me-1"></i>Return
-                </label>
-              </div>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label small text-muted mb-1 invisible">Add</label>
-              <button type="submit" class="btn btn-sm btn-primary w-100 d-block">
-                <i class="bi bi-search me-1"></i>Look up &amp; Add
-              </button>
-            </div>
-          </div>
-        </form>
+        {% if trip.departure_date %}
+          <span class="text-muted small">
+            <i class="bi bi-calendar3 me-1"></i>{{ trip.departure_date.strftime('%d %b %Y') }}
+            {% if trip.return_date %}→ {{ trip.return_date.strftime('%d %b %Y') }}{% endif %}
+          </span>
+        {% endif %}
       </div>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
+      {% if is_in_progress and trip.trip_bags %}
+        <a href="/trips/{{ trip.id }}/checkin" class="btn btn-sm btn-primary">
+          <i class="bi bi-tag me-1"></i>{{ 'Update Check In' if active_checkin else 'Check In Bags' }}
+        </a>
+        {% if active_checkin %}
+          <a href="/trips/{{ trip.id }}/collect" class="btn btn-sm btn-success">
+            <i class="bi bi-bag-check me-1"></i>Collect Bags
+          </a>
+        {% endif %}
+      {% endif %}
+      <a href="/trips/{{ trip.id }}/edit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+      <form method="post" action="/trips/{{ trip.id }}/delete">
+        <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Delete this trip and all its data?">
+          <i class="bi bi-trash me-1"></i>Delete
+        </button>
+      </form>
     </div>
   </div>
 
-  <!-- ── Bags tab ─────────────────────────────────────────────────────── -->
-  <div class="tab-pane fade" id="tab-bags">
-    {% set active_bags = trip.trip_bags | selectattr('is_active') | list %}
-    {% set inactive_bags = trip.trip_bags | rejectattr('is_active') | list %}
+  {% if trip.description %}
+    <p class="text-muted mb-3">{{ trip.description }}</p>
+  {% endif %}
 
-    {% if cross_trip_checkin %}
-    <div class="alert alert-warning py-2 small mb-3">
-      <i class="bi bi-exclamation-triangle me-1"></i>
-      Active check-in on <a href="/trips/{{ cross_trip_checkin.trip.id }}?tab=bags" class="alert-link">{{ cross_trip_checkin.trip.name }}</a> — collect those bags before starting a new check-in.
-    </div>
-    {% endif %}
-
-    {% if active_bags %}
-    <div class="row g-3 mb-4">
-      {% for tb in active_bags %}
-      <div class="col-6 col-md-4 col-lg-3">
-        <div class="card h-100">
-          {% if tb.bag.primary_image %}
-          <img src="/static/uploads/{{ tb.bag.primary_image.filename }}"
-               class="card-img-top" style="height:120px;object-fit:cover;" alt="{{ tb.bag.name }}">
-          {% else %}
-          <div class="d-flex align-items-center justify-content-center bg-light" style="height:120px;">
-            <i class="bi bi-luggage text-secondary opacity-50" style="font-size:2rem"></i>
-          </div>
-          {% endif %}
-          <div class="card-body p-2">
-            <p class="fw-semibold small mb-0">
-              <a href="/bags/{{ tb.bag.id }}" class="text-decoration-none text-dark">{{ tb.bag.name }}</a>
-            </p>
-            {% if tb.bag.size_category %}
-            <span class="badge bg-light text-dark border" style="font-size:.65rem">
-              {{ tb.bag.size_category | replace('_', ' ') | title }}
-            </span>
-            {% endif %}
-          </div>
-          <div class="card-footer p-1 border-0 bg-transparent">
-            <form method="post" action="/trips/{{ trip.id }}/bags/{{ tb.bag.id }}/remove">
-              <button type="submit" class="btn btn-sm btn-outline-danger w-100 py-0"
-                      data-confirm="Remove {{ tb.bag.name }} from this trip?">
-                <i class="bi bi-x me-1"></i>Remove
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% elif not inactive_bags %}
-    <p class="text-muted mb-4">No bags assigned to this trip yet.</p>
-    {% endif %}
-
-    {% if inactive_bags %}
-    <div class="mb-4">
-      <h6 class="text-muted small text-uppercase fw-semibold mb-2">
-        <i class="bi bi-clock-history me-1"></i>Previously on this trip
-      </h6>
-      <div class="row g-2">
-        {% for tb in inactive_bags %}
-        <div class="col-6 col-md-4 col-lg-3">
-          <div class="card h-100 opacity-50">
-            {% if tb.bag.primary_image %}
-            <img src="/static/uploads/{{ tb.bag.primary_image.filename }}"
-                 class="card-img-top" style="height:80px;object-fit:cover;" alt="{{ tb.bag.name }}">
-            {% else %}
-            <div class="d-flex align-items-center justify-content-center bg-light" style="height:80px;">
-              <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.5rem"></i>
-            </div>
-            {% endif %}
-            <div class="card-body p-2">
-              <p class="small mb-0">
-                <a href="/bags/{{ tb.bag.id }}" class="text-decoration-none text-muted">{{ tb.bag.name }}</a>
-              </p>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {% if available_bags %}
-    <div class="card">
-      <div class="card-header bg-light small fw-semibold"><i class="bi bi-luggage me-1"></i>Assign a Bag</div>
-      <div class="card-body">
-        <form method="post" action="/trips/{{ trip.id }}/bags" class="d-flex gap-2">
-          <select class="form-select form-select-sm" name="bag_id" required>
-            <option value="">— choose a bag —</option>
-            {% for bag in available_bags %}
-            <option value="{{ bag.id }}">{{ bag.name }}{% if bag.brand %} ({{ bag.brand }}){% endif %}</option>
-            {% endfor %}
-          </select>
-          <button type="submit" class="btn btn-sm btn-primary flex-shrink-0">
-            <i class="bi bi-plus-lg me-1"></i>Assign
-          </button>
-        </form>
-      </div>
-    </div>
-    {% elif not trip.trip_bags %}
-    <p class="text-muted small">
-      <a href="/bags/new">Add a bag</a> to your collection first, then assign it here.
-    </p>
-    {% endif %}
-
-    {% if trip.checkins %}
-    <div class="mt-4">
-      <h6 class="text-muted small text-uppercase fw-semibold mb-2">
-        <i class="bi bi-clock-history me-1"></i>Check-In History
-      </h6>
-      {% for ci in trip.checkins %}
-      {% set ci_checked = ci.bag_checkins | selectattr('status', 'equalto', 'checked_in') | list %}
-      {% set ci_carry = ci.bag_checkins | selectattr('status', 'equalto', 'carry_on') | list %}
-      {% set ci_all_processed = ci_checked | length > 0 and ci_checked | selectattr('collected_at') | list | length == ci_checked | length %}
-      {% set ci_damaged = ci_checked | selectattr('collection_outcome', 'equalto', 'damaged') | list %}
-      {% set ci_missing = ci_checked | selectattr('collection_outcome', 'equalto', 'missing') | list %}
-      {% set ci_has_issue = ci_damaged | length > 0 or ci_missing | length > 0 %}
-      <div class="card mb-2 {% if ci_all_processed %}{% if ci_has_issue %}border-danger border-opacity-50{% else %}border-success border-opacity-50{% endif %}{% endif %}">
-        <div class="card-body py-2 px-3">
-          <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <div>
-              <span class="small fw-semibold">{{ ci.created_at.strftime('%d %b %Y %H:%M') }}</span>
-              {% if ci.flights %}
-              <div class="d-flex flex-wrap gap-1 mt-1">
-                {% for f in ci.flights %}
-                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle" style="font-size:.65rem">
-                  {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> · {% endif %}{{ f.departure_airport }}<i class="bi bi-arrow-right mx-1"></i>{{ f.arrival_airport }}
-                </span>
-                {% endfor %}
-              </div>
-              {% endif %}
-              <div class="d-flex flex-wrap gap-1 mt-1">
-                {% for bc in ci_checked %}
-                {% if not bc.collected_at %}
-                <span class="badge bg-warning text-dark" style="font-size:.65rem">
-                  <i class="bi bi-tag me-1"></i>{{ bc.bag.name }}
-                  {% if bc.licence_plate_number %}<span class="font-monospace">· {{ bc.licence_plate_number }}</span>{% endif %}
-                </span>
-                {% elif bc.collection_outcome == 'damaged' %}
-                <span class="badge bg-danger" style="font-size:.65rem">
-                  <i class="bi bi-exclamation-triangle me-1"></i>{{ bc.bag.name }}
-                  {% if bc.pir_reference %}<span class="font-monospace">· {{ bc.pir_reference }}</span>{% endif %}
-                </span>
-                {% elif bc.collection_outcome == 'missing' %}
-                <span class="badge bg-danger" style="font-size:.65rem">
-                  <i class="bi bi-question-circle me-1"></i>{{ bc.bag.name }}
-                  {% if bc.pir_reference %}<span class="font-monospace">· {{ bc.pir_reference }}</span>{% endif %}
-                </span>
-                {% else %}
-                <span class="badge bg-success" style="font-size:.65rem">
-                  <i class="bi bi-tag me-1"></i>{{ bc.bag.name }}
-                  {% if bc.licence_plate_number %}<span class="font-monospace">· {{ bc.licence_plate_number }}</span>{% endif %}
-                  <i class="bi bi-check2 ms-1"></i>
-                </span>
-                {% endif %}
-                {% endfor %}
-                {% for bc in ci_carry %}
-                <span class="badge bg-light text-dark border" style="font-size:.65rem">
-                  <i class="bi bi-person-walking me-1"></i>{{ bc.bag.name }}
-                </span>
-                {% endfor %}
-              </div>
-            </div>
-            {% if ci_all_processed %}
-              {% if ci_has_issue %}
-              <span class="badge bg-danger flex-shrink-0" style="font-size:.7rem">
-                {% if ci_missing %}Missing{% else %}Damage reported{% endif %}
-              </span>
-              {% else %}
-              <span class="badge bg-success flex-shrink-0" style="font-size:.7rem">All collected</span>
-              {% endif %}
-            {% elif ci_checked %}
-            <span class="badge bg-warning text-dark flex-shrink-0" style="font-size:.7rem">Awaiting collection</span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-  </div>
-
-  <!-- ── Packing list tab ─────────────────────────────────────────────── -->
-  <div class="tab-pane fade" id="tab-packing">
-    {% set active_bag_ids = trip.trip_bags | selectattr('is_active') | map(attribute='bag_id') | list %}
-    {% if trip.packing_list %}
-    {% set pl = trip.packing_list %}
-    {% set packed_count = pl.items | selectattr('is_packed') | list | length %}
-    {% set total_count = pl.items | length %}
-
-    <!-- Progress -->
-    {% if total_count > 0 %}
-    <div class="mb-3">
-      <div class="d-flex justify-content-between small text-muted mb-1">
-        <span id="pack-progress-text">{{ packed_count }} of {{ total_count }} packed</span>
-        <span id="pack-progress-pct">{{ ((packed_count / total_count) * 100) | int }}%</span>
-      </div>
-      <div class="progress" style="height:6px">
-        <div id="pack-progress-bar" class="progress-bar bg-success" style="width:{{ ((packed_count / total_count) * 100) | int }}%"></div>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Clone from template -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h6 class="mb-0 text-muted">{{ total_count }} item{{ 's' if total_count != 1 }}</h6>
-      <button class="btn btn-sm btn-outline-secondary" type="button"
-              data-bs-toggle="collapse" data-bs-target="#clonePanel">
-        <i class="bi bi-copy me-1"></i>Import from template
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3" id="tripTabs">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-flights">
+        <i class="bi bi-airplane me-1"></i>Flights
+        {% if trip.flights %}
+          <span class="badge bg-secondary ms-1"
+            >{{ trip.flights | selectattr('rerouted_from_id', 'none') | list | length }}</span
+          >
+        {% endif %}
       </button>
-    </div>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-bags">
+        <i class="bi bi-luggage me-1"></i>Bags
+        {% if trip.trip_bags %}<span class="badge bg-secondary ms-1">{{ trip.trip_bags | length }}</span>{% endif %}
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-packing">
+        <i class="bi bi-list-check me-1"></i>Packing
+        {% if trip.packing_list %}
+          {% set packed = trip.packing_list.items | selectattr('is_packed') | list | length %}
+          {% set total = trip.packing_list.items | length %}
+          <span
+            id="packing-tab-badge"
+            class="badge bg-{% if packed == total and total > 0 %}success{% else %}secondary{% endif %} ms-1"
+          >
+            {{ packed }}/{{ total }}
+          </span>
+        {% endif %}
+      </button>
+    </li>
+  </ul>
 
-    <div class="collapse mb-3" id="clonePanel">
-      <div class="card card-body bg-light">
-        <form method="post" action="/packing/trips/{{ trip.id }}/clone-template" class="d-flex gap-2">
-          <select class="form-select form-select-sm" name="template_id" required>
-            <option value="">— choose a template —</option>
-            <optgroup label="Default Templates">
-              {% for tmpl in packing_templates if tmpl.is_default %}
-              <option value="{{ tmpl.id }}">{{ tmpl.name }}</option>
-              {% endfor %}
-            </optgroup>
-            <optgroup label="My Templates">
-              {% for tmpl in packing_templates if not tmpl.is_default %}
-              <option value="{{ tmpl.id }}">{{ tmpl.name }}</option>
-              {% endfor %}
-            </optgroup>
-          </select>
-          <button type="submit" class="btn btn-sm btn-primary flex-shrink-0">
-            <i class="bi bi-copy me-1"></i>Import
-          </button>
-        </form>
-        <p class="small text-muted mt-2 mb-0">Items will be appended to your existing list.</p>
-      </div>
-    </div>
-
-    <!-- Items grouped by category -->
-    {% if pl.items %}
-    {% set categories = pl.items | map(attribute='category') | unique | sort | list %}
-    {% for cat in categories %}
-    {% set cat_items = pl.items | selectattr('category', 'equalto', cat) | list %}
-    <div class="card mb-3">
-      <div class="card-header bg-light py-2 d-flex align-items-center">
-        <span class="fw-semibold small text-uppercase text-muted">{{ cat | replace('_', ' ') | title }}</span>
-        <span class="badge bg-secondary ms-2" style="font-size:.65rem">{{ cat_items | length }}</span>
-      </div>
-      <ul class="list-group list-group-flush">
-        {% for item in cat_items %}
-        <li class="list-group-item py-2 {% if item.is_packed %}packed-row{% endif %}" id="item-{{ item.id }}">
-          <div class="d-flex align-items-center gap-2">
-            {% set bag_locked = item.bag_id and item.bag_id not in active_bag_ids %}
-            <input type="checkbox" class="form-check-input flex-shrink-0 pack-toggle"
-                   {% if item.is_packed %}checked{% endif %}
-                   {% if bag_locked %}disabled title="Bag is not active on this trip"{% else %}data-url="/packing/trips/{{ trip.id }}/items/{{ item.id }}/toggle" title="Toggle packed"{% endif %}>
-            <div class="flex-grow-1 min-w-0">
-              <span class="fw-medium">{{ item.name }}</span>
-              {% if item.quantity > 1 %}
-              <span class="badge bg-light text-dark border ms-1" style="font-size:.7rem">×{{ item.quantity }}</span>
-              {% endif %}
-              {% if item.notes %}<br><span class="text-muted small">{{ item.notes }}</span>{% endif %}
-              {% if item.bag %}
-              <br><span class="badge bg-light text-dark border mt-1" style="font-size:.7rem">
-                <i class="bi bi-luggage me-1"></i>{{ item.bag.name }}
+  <div class="tab-content">
+    <!-- ── Flights tab ──────────────────────────────────────────────────── -->
+    <div class="tab-pane fade show active" id="tab-flights">
+      {%- macro render_flight(f, depth) -%}
+        {%- set indent = depth * 1.5 -%}
+        <tr class="{% if f.is_cancelled %}table-danger{% endif %}">
+          <td style="padding-left:calc(0.5rem + {{ indent }}rem)">
+            {% if depth > 0 %}<span class="text-muted me-1">↳</span>{% endif %}
+            {% if f.flight_number %}
+              <strong class="{% if f.is_cancelled %}text-decoration-line-through{% endif %}"
+                >{{ f.flight_number }}</strong
+              >
+            {% endif %}
+            {% if depth == 0 %}
+              <span
+                class="badge {% if f.is_return %}bg-info text-dark{% else %}bg-success{% endif %} {% if f.is_cancelled %}opacity-50{% endif %} ms-1"
+              >
+                {{ 'Return' if f.is_return else 'Outward' }}
               </span>
+            {% endif %}
+            {% if f.airline %}<br /><span class="text-muted small">{{ f.airline }}</span>{% endif %}
+          </td>
+          <td>
+            <span
+              class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle {% if f.is_cancelled %}opacity-50{% endif %}"
+            >
+              {{ f.departure_airport }} <i class="bi bi-arrow-right"></i> {{ f.arrival_airport }}
+            </span>
+          </td>
+          <td class="small {% if f.is_cancelled %}text-muted{% endif %}">
+            {{ f.departure_at.strftime('%d %b %Y %H:%M') if f.departure_at else '—' }}
+          </td>
+          <td class="small d-none d-md-table-cell {% if f.is_cancelled %}text-muted{% endif %}">
+            {{ f.arrival_at.strftime('%d %b %Y %H:%M') if f.arrival_at else '—' }}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end flex-wrap">
+              {% if f.is_cancelled %}
+                <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/uncancel">
+                  <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Uncancel
+                  </button>
+                </form>
+              {% else %}
+                <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/cancel">
+                  <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                  </button>
+                </form>
               {% endif %}
-              {% if item.affiliate_url %}
-              <a href="{{ item.affiliate_url }}" target="_blank" rel="noopener sponsored"
-                 class="affiliate-badge ms-1">amazon</a>
-              {% endif %}
+              <form method="post" action="/trips/{{ trip.id }}/flights/{{ f.id }}/delete">
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-outline-danger py-0 px-2"
+                  data-confirm="Remove this flight?"
+                >
+                  <i class="bi bi-trash me-1"></i>Remove
+                </button>
+              </form>
             </div>
-            <!-- Assign bag -->
-            {% set assignable_bags = trip.trip_bags | selectattr('is_active') | list %}
-            {% if assignable_bags %}
-            <form method="post" action="/packing/trips/{{ trip.id }}/items/{{ item.id }}/assign-bag"
-                  class="d-flex gap-1 hide-mobile">
-              <select class="form-select form-select-sm" name="bag_id" style="width:auto;min-width:100px;font-size:.75rem">
-                <option value="">No bag</option>
-                {% for tb in assignable_bags %}
-                <option value="{{ tb.bag.id }}" {% if item.bag_id == tb.bag.id %}selected{% endif %}>
-                  {{ tb.bag.name }}
-                </option>
+          </td>
+        </tr>
+
+        {%- for r in f.reroutings -%}
+          {{ render_flight(r, depth + 1) }}
+        {%- endfor -%}
+
+        {% if f.is_cancelled %}
+          <tr class="table-light">
+            <td colspan="5" style="padding-left:calc(0.5rem + {{ indent + 1.5 }}rem)">
+              <form
+                method="post"
+                action="/trips/{{ trip.id }}/flights/{{ f.id }}/reroutings"
+                class="d-flex align-items-end gap-2 flex-wrap py-1"
+              >
+                <div>
+                  <label class="form-label small text-muted mb-1">Rerouting flight no.</label>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    name="flight_number"
+                    placeholder="e.g. BA456"
+                    maxlength="20"
+                    required
+                    style="text-transform:uppercase;width:130px"
+                  />
+                </div>
+                <div>
+                  <label class="form-label small text-muted mb-1">Date</label>
+                  <input
+                    type="date"
+                    class="form-control form-control-sm"
+                    name="departure_date"
+                    required
+                    style="width:140px"
+                  />
+                </div>
+                <div class="align-self-end">
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-search me-1"></i>Look up &amp; Add rerouting
+                  </button>
+                </div>
+              </form>
+            </td>
+          </tr>
+        {% endif %}
+      {%- endmacro -%}
+
+      {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
+      {% if root_flights %}
+        <div class="table-responsive mb-4">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Flight</th>
+                <th>Route</th>
+                <th>Departure</th>
+                <th class="d-none d-md-table-cell">Arrival</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for f in root_flights %}
+                {{ render_flight(f, 0) }}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted">No flights added yet.</p>
+      {% endif %}
+
+      <!-- Add flight form -->
+      <div class="card">
+        <div class="card-header bg-light fw-semibold small"><i class="bi bi-plus-lg me-1"></i>Add Flight</div>
+        <div class="card-body">
+          <form method="post" action="/trips/{{ trip.id }}/flights">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Flight number</label>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  name="flight_number"
+                  placeholder="e.g. BA123"
+                  maxlength="20"
+                  required
+                  style="text-transform:uppercase"
+                />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Departure date</label>
+                <input
+                  type="date"
+                  class="form-control form-control-sm"
+                  name="departure_date"
+                  id="flight-departure-date"
+                  required
+                />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Direction</label>
+                <div class="btn-group w-100" role="group" aria-label="Flight direction">
+                  <input type="radio" class="btn-check" name="is_return" id="dir_outward" value="" checked />
+                  <label class="btn btn-sm btn-outline-secondary" for="dir_outward">
+                    <i class="bi bi-arrow-right me-1"></i>Outward
+                  </label>
+                  <input type="radio" class="btn-check" name="is_return" id="dir_return" value="on" />
+                  <label class="btn btn-sm btn-outline-secondary" for="dir_return">
+                    <i class="bi bi-arrow-left me-1"></i>Return
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small text-muted mb-1 invisible">Add</label>
+                <button type="submit" class="btn btn-sm btn-primary w-100 d-block">
+                  <i class="bi bi-search me-1"></i>Look up &amp; Add
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Bags tab ─────────────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-bags">
+      {% set active_bags = trip.trip_bags | selectattr('is_active') | list %}
+      {% set inactive_bags = trip.trip_bags | rejectattr('is_active') | list %}
+
+      {% if cross_trip_checkin %}
+        <div class="alert alert-warning py-2 small mb-3">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Active check-in on
+          <a href="/trips/{{ cross_trip_checkin.trip.id }}?tab=bags" class="alert-link"
+            >{{ cross_trip_checkin.trip.name }}</a
+          >
+          — collect those bags before starting a new check-in.
+        </div>
+      {% endif %}
+
+      {% if active_bags %}
+        <div class="row g-3 mb-4">
+          {% for tb in active_bags %}
+            <div class="col-6 col-md-4 col-lg-3">
+              <div class="card h-100">
+                {% if tb.bag.primary_image %}
+                  <img
+                    src="/static/uploads/{{ tb.bag.primary_image.filename }}"
+                    class="card-img-top"
+                    style="height:120px;object-fit:cover;"
+                    alt="{{ tb.bag.name }}"
+                  />
+                {% else %}
+                  <div class="d-flex align-items-center justify-content-center bg-light" style="height:120px;">
+                    <i class="bi bi-luggage text-secondary opacity-50" style="font-size:2rem"></i>
+                  </div>
+                {% endif %}
+                <div class="card-body p-2">
+                  <p class="fw-semibold small mb-0">
+                    <a href="/bags/{{ tb.bag.id }}" class="text-decoration-none text-dark">{{ tb.bag.name }}</a>
+                  </p>
+                  {% if tb.bag.size_category %}
+                    <span class="badge bg-light text-dark border" style="font-size:.65rem">
+                      {{ tb.bag.size_category | replace('_', ' ') | title }}
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="card-footer p-1 border-0 bg-transparent">
+                  <form method="post" action="/trips/{{ trip.id }}/bags/{{ tb.bag.id }}/remove">
+                    <button
+                      type="submit"
+                      class="btn btn-sm btn-outline-danger w-100 py-0"
+                      data-confirm="Remove {{ tb.bag.name }} from this trip?"
+                    >
+                      <i class="bi bi-x me-1"></i>Remove
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% elif not inactive_bags %}
+        <p class="text-muted mb-4">No bags assigned to this trip yet.</p>
+      {% endif %}
+
+      {% if inactive_bags %}
+        <div class="mb-4">
+          <h6 class="text-muted small text-uppercase fw-semibold mb-2">
+            <i class="bi bi-clock-history me-1"></i>Previously on this trip
+          </h6>
+          <div class="row g-2">
+            {% for tb in inactive_bags %}
+              <div class="col-6 col-md-4 col-lg-3">
+                <div class="card h-100 opacity-50">
+                  {% if tb.bag.primary_image %}
+                    <img
+                      src="/static/uploads/{{ tb.bag.primary_image.filename }}"
+                      class="card-img-top"
+                      style="height:80px;object-fit:cover;"
+                      alt="{{ tb.bag.name }}"
+                    />
+                  {% else %}
+                    <div class="d-flex align-items-center justify-content-center bg-light" style="height:80px;">
+                      <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.5rem"></i>
+                    </div>
+                  {% endif %}
+                  <div class="card-body p-2">
+                    <p class="small mb-0">
+                      <a href="/bags/{{ tb.bag.id }}" class="text-decoration-none text-muted">{{ tb.bag.name }}</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if available_bags %}
+        <div class="card">
+          <div class="card-header bg-light small fw-semibold"><i class="bi bi-luggage me-1"></i>Assign a Bag</div>
+          <div class="card-body">
+            <form method="post" action="/trips/{{ trip.id }}/bags" class="d-flex gap-2">
+              <select class="form-select form-select-sm" name="bag_id" required>
+                <option value="">— choose a bag —</option>
+                {% for bag in available_bags %}
+                  <option value="{{ bag.id }}">{{ bag.name }}{% if bag.brand %}({{ bag.brand }}){% endif %}</option>
                 {% endfor %}
               </select>
-              <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Assign bag">
-                <i class="bi bi-luggage" style="font-size:.75rem"></i>
+              <button type="submit" class="btn btn-sm btn-primary flex-shrink-0">
+                <i class="bi bi-plus-lg me-1"></i>Assign
               </button>
             </form>
-            {% endif %}
-            <!-- Delete -->
-            <form method="post" action="/packing/trips/{{ trip.id }}/items/{{ item.id }}/delete">
-              <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"
-                      data-confirm="Remove '{{ item.name }}'?">&times;</button>
+          </div>
+        </div>
+      {% elif not trip.trip_bags %}
+        <p class="text-muted small"><a href="/bags/new">Add a bag</a> to your collection first, then assign it here.</p>
+      {% endif %}
+
+      {% if trip.checkins %}
+        <div class="mt-4">
+          <h6 class="text-muted small text-uppercase fw-semibold mb-2">
+            <i class="bi bi-clock-history me-1"></i>Check-In History
+          </h6>
+          {% for ci in trip.checkins %}
+            {% set ci_checked = ci.bag_checkins | selectattr('status', 'equalto', 'checked_in') | list %}
+            {% set ci_carry = ci.bag_checkins | selectattr('status', 'equalto', 'carry_on') | list %}
+            {% set ci_all_processed = ci_checked | length > 0 and ci_checked | selectattr('collected_at') | list | length == ci_checked | length %}
+            {% set ci_damaged = ci_checked | selectattr('collection_outcome', 'equalto', 'damaged') | list %}
+            {% set ci_missing = ci_checked | selectattr('collection_outcome', 'equalto', 'missing') | list %}
+            {% set ci_has_issue = ci_damaged | length > 0 or ci_missing | length > 0 %}
+            <div
+              class="card mb-2 {% if ci_all_processed %}{% if ci_has_issue %}
+                border-danger border-opacity-50
+              {% else %}
+                border-success border-opacity-50
+              {% endif %}{% endif %}"
+            >
+              <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                  <div>
+                    <span class="small fw-semibold">{{ ci.created_at.strftime('%d %b %Y %H:%M') }}</span>
+                    {% if ci.flights %}
+                      <div class="d-flex flex-wrap gap-1 mt-1">
+                        {% for f in ci.flights %}
+                          <span
+                            class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle"
+                            style="font-size:.65rem"
+                          >
+                            {% if f.flight_number %}
+                              <strong>{{ f.flight_number }}</strong> ·
+                            {% endif %}{{ f.departure_airport }}<i class="bi bi-arrow-right mx-1"></i
+                            >{{ f.arrival_airport }}
+                          </span>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                      {% for bc in ci_checked %}
+                        {% if not bc.collected_at %}
+                          <span class="badge bg-warning text-dark" style="font-size:.65rem">
+                            <i class="bi bi-tag me-1"></i>{{ bc.bag.name }}
+                            {% if bc.licence_plate_number %}
+                              <span class="font-monospace">· {{ bc.licence_plate_number }}</span>
+                            {% endif %}
+                          </span>
+                        {% elif bc.collection_outcome == 'damaged' %}
+                          <span class="badge bg-danger" style="font-size:.65rem">
+                            <i class="bi bi-exclamation-triangle me-1"></i>{{ bc.bag.name }}
+                            {% if bc.pir_reference %}
+                              <span class="font-monospace">· {{ bc.pir_reference }}</span>
+                            {% endif %}
+                          </span>
+                        {% elif bc.collection_outcome == 'missing' %}
+                          <span class="badge bg-danger" style="font-size:.65rem">
+                            <i class="bi bi-question-circle me-1"></i>{{ bc.bag.name }}
+                            {% if bc.pir_reference %}
+                              <span class="font-monospace">· {{ bc.pir_reference }}</span>
+                            {% endif %}
+                          </span>
+                        {% else %}
+                          <span class="badge bg-success" style="font-size:.65rem">
+                            <i class="bi bi-tag me-1"></i>{{ bc.bag.name }}
+                            {% if bc.licence_plate_number %}
+                              <span class="font-monospace">· {{ bc.licence_plate_number }}</span>
+                            {% endif %}
+                            <i class="bi bi-check2 ms-1"></i>
+                          </span>
+                        {% endif %}
+                      {% endfor %}
+                      {% for bc in ci_carry %}
+                        <span class="badge bg-light text-dark border" style="font-size:.65rem">
+                          <i class="bi bi-person-walking me-1"></i>{{ bc.bag.name }}
+                        </span>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% if ci_all_processed %}
+                    {% if ci_has_issue %}
+                      <span class="badge bg-danger flex-shrink-0" style="font-size:.7rem">
+                        {% if ci_missing %}Missing{% else %}Damage reported{% endif %}
+                      </span>
+                    {% else %}
+                      <span class="badge bg-success flex-shrink-0" style="font-size:.7rem">All collected</span>
+                    {% endif %}
+                  {% elif ci_checked %}
+                    <span class="badge bg-warning text-dark flex-shrink-0" style="font-size:.7rem"
+                      >Awaiting collection</span
+                    >
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Packing list tab ─────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-packing">
+      {% set active_bag_ids = trip.trip_bags | selectattr('is_active') | map(attribute='bag_id') | list %}
+      {% if trip.packing_list %}
+        {% set pl = trip.packing_list %}
+        {% set packed_count = pl.items | selectattr('is_packed') | list | length %}
+        {% set total_count = pl.items | length %}
+
+        <!-- Progress -->
+        {% if total_count > 0 %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small text-muted mb-1">
+              <span id="pack-progress-text">{{ packed_count }} of {{ total_count }} packed</span>
+              <span id="pack-progress-pct">{{ ((packed_count / total_count) * 100) | int }}%</span>
+            </div>
+            <div class="progress" style="height:6px">
+              <div
+                id="pack-progress-bar"
+                class="progress-bar bg-success"
+                style="width:{{ ((packed_count / total_count) * 100) | int }}%"
+              ></div>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Clone from template -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0 text-muted">{{ total_count }} item{{ 's' if total_count != 1 }}</h6>
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#clonePanel"
+          >
+            <i class="bi bi-copy me-1"></i>Import from template
+          </button>
+        </div>
+
+        <div class="collapse mb-3" id="clonePanel">
+          <div class="card card-body bg-light">
+            <form method="post" action="/packing/trips/{{ trip.id }}/clone-template" class="d-flex gap-2">
+              <select class="form-select form-select-sm" name="template_id" required>
+                <option value="">— choose a template —</option>
+                <optgroup label="Default Templates">
+                  {% for tmpl in packing_templates if tmpl.is_default %}
+                    <option value="{{ tmpl.id }}">{{ tmpl.name }}</option>
+                  {% endfor %}
+                </optgroup>
+                <optgroup label="My Templates">
+                  {% for tmpl in packing_templates if not tmpl.is_default %}
+                    <option value="{{ tmpl.id }}">{{ tmpl.name }}</option>
+                  {% endfor %}
+                </optgroup>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary flex-shrink-0">
+                <i class="bi bi-copy me-1"></i>Import
+              </button>
+            </form>
+            <p class="small text-muted mt-2 mb-0">Items will be appended to your existing list.</p>
+          </div>
+        </div>
+
+        <!-- Items grouped by category -->
+        {% if pl.items %}
+          {% set categories = pl.items | map(attribute='category') | unique | sort | list %}
+          {% for cat in categories %}
+            {% set cat_items = pl.items | selectattr('category', 'equalto', cat) | list %}
+            <div class="card mb-3">
+              <div class="card-header bg-light py-2 d-flex align-items-center">
+                <span class="fw-semibold small text-uppercase text-muted">{{ cat | replace('_', ' ') | title }}</span>
+                <span class="badge bg-secondary ms-2" style="font-size:.65rem">{{ cat_items | length }}</span>
+              </div>
+              <ul class="list-group list-group-flush">
+                {% for item in cat_items %}
+                  <li class="list-group-item py-2 {% if item.is_packed %}packed-row{% endif %}" id="item-{{ item.id }}">
+                    <div class="d-flex align-items-center gap-2">
+                      {% set bag_locked = item.bag_id and item.bag_id not in active_bag_ids %}
+                      <input
+                        type="checkbox"
+                        class="form-check-input flex-shrink-0 pack-toggle"
+                        {% if item.is_packed %}checked{% endif %}
+                        {% if bag_locked %}
+                          disabled title="Bag is not active on this trip"
+                        {% else %}
+                          data-url="/packing/trips/{{ trip.id }}/items/{{ item.id }}/toggle" title="Toggle packed"
+                        {% endif %}
+                      />
+                      <div class="flex-grow-1 min-w-0">
+                        <span class="fw-medium">{{ item.name }}</span>
+                        {% if item.quantity > 1 %}
+                          <span class="badge bg-light text-dark border ms-1" style="font-size:.7rem"
+                            >×{{ item.quantity }}</span
+                          >
+                        {% endif %}
+                        {% if item.notes %}<br /><span class="text-muted small">{{ item.notes }}</span>{% endif %}
+                        {% if item.bag %}
+                          <br /><span class="badge bg-light text-dark border mt-1" style="font-size:.7rem">
+                            <i class="bi bi-luggage me-1"></i>{{ item.bag.name }}
+                          </span>
+                        {% endif %}
+                        {% if item.affiliate_url %}
+                          <a
+                            href="{{ item.affiliate_url }}"
+                            target="_blank"
+                            rel="noopener sponsored"
+                            class="affiliate-badge ms-1"
+                            >amazon</a
+                          >
+                        {% endif %}
+                      </div>
+                      <!-- Assign bag -->
+                      {% set assignable_bags = trip.trip_bags | selectattr('is_active') | list %}
+                      {% if assignable_bags %}
+                        <form
+                          method="post"
+                          action="/packing/trips/{{ trip.id }}/items/{{ item.id }}/assign-bag"
+                          class="d-flex gap-1 hide-mobile"
+                        >
+                          <select
+                            class="form-select form-select-sm"
+                            name="bag_id"
+                            style="width:auto;min-width:100px;font-size:.75rem"
+                          >
+                            <option value="">No bag</option>
+                            {% for tb in assignable_bags %}
+                              <option value="{{ tb.bag.id }}" {% if item.bag_id == tb.bag.id %}selected{% endif %}>
+                                {{ tb.bag.name }}
+                              </option>
+                            {% endfor %}
+                          </select>
+                          <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Assign bag">
+                            <i class="bi bi-luggage" style="font-size:.75rem"></i>
+                          </button>
+                        </form>
+                      {% endif %}
+                      <!-- Delete -->
+                      <form method="post" action="/packing/trips/{{ trip.id }}/items/{{ item.id }}/delete">
+                        <button
+                          type="submit"
+                          class="btn btn-sm btn-outline-danger py-0 px-1"
+                          data-confirm="Remove '{{ item.name }}'?"
+                        >
+                          &times;
+                        </button>
+                      </form>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted">No items yet. Add some below or import from a template.</p>
+        {% endif %}
+
+        <!-- Add item form -->
+        <div class="card mt-3">
+          <div class="card-header bg-light small fw-semibold"><i class="bi bi-plus-lg me-1"></i>Add Item</div>
+          <div class="card-body">
+            <form method="post" action="/packing/trips/{{ trip.id }}/items">
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    name="name"
+                    placeholder="Item name"
+                    required
+                    maxlength="200"
+                  />
+                </div>
+                <div class="col-md-2">
+                  <select class="form-select form-select-sm" name="category">
+                    <option value="clothing">Clothing</option>
+                    <option value="footwear">Footwear</option>
+                    <option value="toiletries">Toiletries</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="documents">Documents</option>
+                    <option value="medications">Medications</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="food_drink">Food &amp; Drink</option>
+                    <option value="other" selected>Other</option>
+                  </select>
+                </div>
+                <div class="col-md-1">
+                  <input
+                    type="number"
+                    class="form-control form-control-sm"
+                    name="quantity"
+                    value="1"
+                    min="1"
+                    max="99"
+                  />
+                </div>
+                {% if trip.trip_bags %}
+                  <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="bag_id">
+                      <option value="">No bag</option>
+                      {% for tb in trip.trip_bags %}
+                        <option value="{{ tb.bag.id }}">{{ tb.bag.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                {% endif %}
+                <div class="col-md-{% if trip.trip_bags %}2{% else %}4{% endif %}">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    name="notes"
+                    placeholder="Notes (optional)"
+                    maxlength="500"
+                  />
+                </div>
+                <div class="col-md-1">
+                  <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+                </div>
+              </div>
             </form>
           </div>
-        </li>
-        {% endfor %}
-      </ul>
+        </div>
+      {% else %}
+        <p class="text-muted">Packing list not found for this trip.</p>
+      {% endif %}
     </div>
-    {% endfor %}
-    {% else %}
-    <p class="text-muted">No items yet. Add some below or import from a template.</p>
-    {% endif %}
-
-    <!-- Add item form -->
-    <div class="card mt-3">
-      <div class="card-header bg-light small fw-semibold"><i class="bi bi-plus-lg me-1"></i>Add Item</div>
-      <div class="card-body">
-        <form method="post" action="/packing/trips/{{ trip.id }}/items">
-          <div class="row g-2">
-            <div class="col-md-4">
-              <input type="text" class="form-control form-control-sm" name="name"
-                     placeholder="Item name" required maxlength="200">
-            </div>
-            <div class="col-md-2">
-              <select class="form-select form-select-sm" name="category">
-                <option value="clothing">Clothing</option>
-                <option value="footwear">Footwear</option>
-                <option value="toiletries">Toiletries</option>
-                <option value="electronics">Electronics</option>
-                <option value="documents">Documents</option>
-                <option value="medications">Medications</option>
-                <option value="accessories">Accessories</option>
-                <option value="entertainment">Entertainment</option>
-                <option value="food_drink">Food &amp; Drink</option>
-                <option value="other" selected>Other</option>
-              </select>
-            </div>
-            <div class="col-md-1">
-              <input type="number" class="form-control form-control-sm" name="quantity"
-                     value="1" min="1" max="99">
-            </div>
-            {% if trip.trip_bags %}
-            <div class="col-md-2">
-              <select class="form-select form-select-sm" name="bag_id">
-                <option value="">No bag</option>
-                {% for tb in trip.trip_bags %}
-                <option value="{{ tb.bag.id }}">{{ tb.bag.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            {% endif %}
-            <div class="col-md-{% if trip.trip_bags %}2{% else %}4{% endif %}">
-              <input type="text" class="form-control form-control-sm" name="notes"
-                     placeholder="Notes (optional)" maxlength="500">
-            </div>
-            <div class="col-md-1">
-              <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {% else %}
-    <p class="text-muted">Packing list not found for this trip.</p>
-    {% endif %}
   </div>
-
-</div><!-- .tab-content -->
+  <!-- .tab-content -->
 {% endblock %}
 
 {% block scripts %}
-<script>
-  // Pre-fill flight departure date from trip dates based on direction
-  (function () {
-    const outwardDefault = "{{ trip.departure_date.isoformat() if trip.departure_date else '' }}";
-    const returnDefault  = "{{ trip.return_date.isoformat() if trip.return_date else '' }}";
-    const dateInput = document.getElementById('flight-departure-date');
-    const radios    = document.querySelectorAll('#tab-flights input[name="is_return"]');
-    if (!dateInput) return;
+  <script>
+    // Pre-fill flight departure date from trip dates based on direction
+    (function () {
+      const outwardDefault = "{{ trip.departure_date.isoformat() if trip.departure_date else '' }}";
+      const returnDefault = "{{ trip.return_date.isoformat() if trip.return_date else '' }}";
+      const dateInput = document.getElementById("flight-departure-date");
+      const radios = document.querySelectorAll('#tab-flights input[name="is_return"]');
+      if (!dateInput) return;
 
-    function tripDefault() {
-      const checked = document.querySelector('#tab-flights input[name="is_return"]:checked');
-      return checked && checked.value === 'on' ? returnDefault : outwardDefault;
-    }
-
-    dateInput.value = tripDefault();
-
-    radios.forEach(r => r.addEventListener('change', () => {
-      // Only update if the value still matches one of the two trip defaults
-      if (!dateInput.value || dateInput.value === outwardDefault || dateInput.value === returnDefault) {
-        dateInput.value = tripDefault();
+      function tripDefault() {
+        const checked = document.querySelector('#tab-flights input[name="is_return"]:checked');
+        return checked && checked.value === "on" ? returnDefault : outwardDefault;
       }
-    }));
-  })();
 
-  // Inline pack toggle — no page reload
-  document.querySelectorAll('.pack-toggle').forEach(cb => {
-    cb.addEventListener('change', async () => {
-      const res = await fetch(cb.dataset.url, { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        cb.closest('li').classList.toggle('packed-row', data.is_packed);
+      dateInput.value = tripDefault();
 
-        const { packed_count, total_count } = data;
-        const pct = total_count > 0 ? Math.floor((packed_count / total_count) * 100) : 0;
+      radios.forEach((r) =>
+        r.addEventListener("change", () => {
+          // Only update if the value still matches one of the two trip defaults
+          if (!dateInput.value || dateInput.value === outwardDefault || dateInput.value === returnDefault) {
+            dateInput.value = tripDefault();
+          }
+        }),
+      );
+    })();
 
-        const progressText = document.getElementById('pack-progress-text');
-        const progressPct  = document.getElementById('pack-progress-pct');
-        const progressBar  = document.getElementById('pack-progress-bar');
-        const tabBadge     = document.getElementById('packing-tab-badge');
+    // Inline pack toggle — no page reload
+    document.querySelectorAll(".pack-toggle").forEach((cb) => {
+      cb.addEventListener("change", async () => {
+        const res = await fetch(cb.dataset.url, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          cb.closest("li").classList.toggle("packed-row", data.is_packed);
 
-        if (progressText) progressText.textContent = `${packed_count} of ${total_count} packed`;
-        if (progressPct)  progressPct.textContent  = `${pct}%`;
-        if (progressBar)  progressBar.style.width  = `${pct}%`;
-        if (tabBadge) {
-          tabBadge.textContent = `${packed_count}/${total_count}`;
-          tabBadge.className = `badge ms-1 bg-${packed_count === total_count && total_count > 0 ? 'success' : 'secondary'}`;
+          const { packed_count, total_count } = data;
+          const pct = total_count > 0 ? Math.floor((packed_count / total_count) * 100) : 0;
+
+          const progressText = document.getElementById("pack-progress-text");
+          const progressPct = document.getElementById("pack-progress-pct");
+          const progressBar = document.getElementById("pack-progress-bar");
+          const tabBadge = document.getElementById("packing-tab-badge");
+
+          if (progressText) progressText.textContent = `${packed_count} of ${total_count} packed`;
+          if (progressPct) progressPct.textContent = `${pct}%`;
+          if (progressBar) progressBar.style.width = `${pct}%`;
+          if (tabBadge) {
+            tabBadge.textContent = `${packed_count}/${total_count}`;
+            tabBadge.className = `badge ms-1 bg-${packed_count === total_count && total_count > 0 ? "success" : "secondary"}`;
+          }
+        } else {
+          cb.checked = !cb.checked; // revert
         }
-      } else {
-        cb.checked = !cb.checked; // revert
-      }
+      });
     });
-  });
-</script>
+  </script>
 {% endblock %}

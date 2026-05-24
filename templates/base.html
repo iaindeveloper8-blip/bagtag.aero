@@ -1,190 +1,248 @@
 <!doctype html>
 <html lang="en" data-bs-theme="light">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}bagtag.aero{% endblock %}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <style>
-    :root {
-      --bt-primary: #0d6efd;
-      --bt-accent: #0dcaf0;
-    }
-    body { background-color: #f8f9fa; }
-    .navbar-brand { font-weight: 700; letter-spacing: -0.5px; }
-    .navbar-brand .dot { color: var(--bt-accent); }
-    .card { box-shadow: 0 1px 4px rgba(0,0,0,.08); border: 1px solid #e9ecef; }
-    .badge-category { font-size: .7rem; }
-    .packed-row td { opacity: .5; text-decoration: line-through; }
-    .img-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: .375rem; }
-    .img-hero { width: 100%; max-height: 320px; object-fit: cover; border-radius: .5rem; }
-    .iata-grid dt { font-weight: 500; color: #6c757d; font-size: .85rem; }
-    .iata-grid dd { margin-bottom: .5rem; }
-    .affiliate-badge {
-      font-size: .7rem; background: #ff9900; color: #111;
-      padding: 1px 6px; border-radius: 3px; font-weight: 600;
-      text-decoration: none;
-    }
-    .affiliate-badge:hover { background: #e68a00; color: #000; }
-    .sidebar-nav .nav-link { color: #495057; border-radius: .375rem; }
-    .sidebar-nav .nav-link.active, .sidebar-nav .nav-link:hover { background: #e9ecef; color: #212529; }
-    @media (max-width: 767px) {
-      .hide-mobile { display: none !important; }
-    }
-  </style>
-  {% block head %}{% endblock %}
-</head>
-<body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}bagtag.aero{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+      :root {
+        --bt-primary: #0d6efd;
+        --bt-accent: #0dcaf0;
+      }
+      body {
+        background-color: #f8f9fa;
+      }
+      .navbar-brand {
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+      .navbar-brand .dot {
+        color: var(--bt-accent);
+      }
+      .card {
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e9ecef;
+      }
+      .badge-category {
+        font-size: 0.7rem;
+      }
+      .packed-row td {
+        opacity: 0.5;
+        text-decoration: line-through;
+      }
+      .img-thumb {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 0.375rem;
+      }
+      .img-hero {
+        width: 100%;
+        max-height: 320px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+      }
+      .iata-grid dt {
+        font-weight: 500;
+        color: #6c757d;
+        font-size: 0.85rem;
+      }
+      .iata-grid dd {
+        margin-bottom: 0.5rem;
+      }
+      .affiliate-badge {
+        font-size: 0.7rem;
+        background: #ff9900;
+        color: #111;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .affiliate-badge:hover {
+        background: #e68a00;
+        color: #000;
+      }
+      .sidebar-nav .nav-link {
+        color: #495057;
+        border-radius: 0.375rem;
+      }
+      .sidebar-nav .nav-link.active,
+      .sidebar-nav .nav-link:hover {
+        background: #e9ecef;
+        color: #212529;
+      }
+      @media (max-width: 767px) {
+        .hide-mobile {
+          display: none !important;
+        }
+      }
+    </style>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+      <div class="container">
+        <a class="navbar-brand" href="{% if user is defined and user %}/dashboard{% else %}/{% endif %}">
+          bagtag<span class="dot">.</span>aero
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+          {% if user is defined and user %}
+            <ul class="navbar-nav me-auto">
+              <li class="nav-item">
+                <a class="nav-link {% if request.url.path.startswith('/bags') %}active{% endif %}" href="/bags">
+                  <i class="bi bi-luggage-fill me-1"></i>My Bags
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.url.path.startswith('/trips') %}active{% endif %}" href="/trips">
+                  <i class="bi bi-airplane me-1"></i>Trips
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  class="nav-link {% if request.url.path.startswith('/packing') %}active{% endif %}"
+                  href="/packing/templates"
+                >
+                  <i class="bi bi-list-check me-1"></i>Packing Lists
+                </a>
+              </li>
+            </ul>
+            <ul class="navbar-nav align-items-center gap-1">
+              <li class="nav-item">
+                <a class="nav-link position-relative" href="/notifications" id="notif-bell" title="Notifications">
+                  <i class="bi bi-bell"></i>
+                  <span
+                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
+                    id="notif-badge"
+                    style="font-size:.6rem"
+                  ></span>
+                </a>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                  <i class="bi bi-person-circle me-1"></i>{{ user.username }}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><span class="dropdown-item-text text-muted small">{{ user.email }}</span></li>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li>
+                    <form method="post" action="/auth/logout">
+                      <button class="dropdown-item text-danger" type="submit">
+                        <i class="bi bi-box-arrow-right me-1"></i>Sign out
+                      </button>
+                    </form>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          {% else %}
+            <ul class="navbar-nav ms-auto">
+              <li class="nav-item"><a class="nav-link" href="/auth/login">Sign in</a></li>
+              <li class="nav-item"><a class="nav-link" href="/auth/register">Register</a></li>
+            </ul>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-  <div class="container">
-    <a class="navbar-brand" href="{% if user is defined and user %}/dashboard{% else %}/{% endif %}">
-      bagtag<span class="dot">.</span>aero
-    </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="mainNav">
-      {% if user is defined and user %}
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-          <a class="nav-link {% if request.url.path.startswith('/bags') %}active{% endif %}" href="/bags">
-            <i class="bi bi-luggage-fill me-1"></i>My Bags
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.url.path.startswith('/trips') %}active{% endif %}" href="/trips">
-            <i class="bi bi-airplane me-1"></i>Trips
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.url.path.startswith('/packing') %}active{% endif %}" href="/packing/templates">
-            <i class="bi bi-list-check me-1"></i>Packing Lists
-          </a>
-        </li>
-      </ul>
-      <ul class="navbar-nav align-items-center gap-1">
-        <li class="nav-item">
-          <a class="nav-link position-relative" href="/notifications" id="notif-bell" title="Notifications">
-            <i class="bi bi-bell"></i>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
-                  id="notif-badge" style="font-size:.6rem"></span>
-          </a>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-            <i class="bi bi-person-circle me-1"></i>{{ user.username }}
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><span class="dropdown-item-text text-muted small">{{ user.email }}</span></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-              <form method="post" action="/auth/logout">
-                <button class="dropdown-item text-danger" type="submit">
-                  <i class="bi bi-box-arrow-right me-1"></i>Sign out
-                </button>
-              </form>
-            </li>
-          </ul>
-        </li>
-      </ul>
-      {% else %}
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link" href="/auth/login">Sign in</a></li>
-        <li class="nav-item"><a class="nav-link" href="/auth/register">Register</a></li>
-      </ul>
+    <div class="container py-4">
+      {% set flash_success = request.query_params.get('success') %}
+      {% set flash_error = request.query_params.get('error') %}
+      {% if flash_success %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ flash_success | replace('+', ' ') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
       {% endif %}
+      {% if flash_error %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ flash_error | replace('+', ' ') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endif %}
+
+      {% block content %}
+      {% endblock %}
     </div>
-  </div>
-</nav>
 
-<div class="container py-4">
-  {% set flash_success = request.query_params.get('success') %}
-  {% set flash_error = request.query_params.get('error') %}
-  {% if flash_success %}
-  <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="bi bi-check-circle-fill me-2"></i>{{ flash_success | replace('+', ' ') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endif %}
-  {% if flash_error %}
-  <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ flash_error | replace('+', ' ') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endif %}
+    <footer class="py-3 mt-4 border-top bg-white">
+      <div class="container text-center text-muted small">bagtag.aero &mdash; your luggage, your journey</div>
+    </footer>
 
-  {% block content %}{% endblock %}
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<footer class="py-3 mt-4 border-top bg-white">
-  <div class="container text-center text-muted small">
-    bagtag.aero &mdash; your luggage, your journey
-  </div>
-</footer>
+    {% block scripts %}{% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Activate the correct tab from ?tab= query param
+      const tabParam = new URLSearchParams(location.search).get("tab");
+      if (tabParam) {
+        const el = document.querySelector(`[data-bs-target="#tab-${tabParam}"]`);
+        if (el) {
+          new bootstrap.Tab(el).show();
+        }
+      }
+      // Confirm destructive actions
+      document.querySelectorAll("[data-confirm]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          if (!confirm(btn.dataset.confirm)) e.preventDefault();
+        });
+      });
 
-{% block scripts %}{% endblock %}
+      // Notification polling (logged-in users only)
+      const notifBadge = document.getElementById("notif-badge");
+      if (notifBadge) {
+        let lastCount = null;
+        const toastContainer = document.createElement("div");
+        toastContainer.className = "position-fixed bottom-0 end-0 p-3";
+        toastContainer.style.zIndex = "1100";
+        document.body.appendChild(toastContainer);
 
-<script>
-  // Activate the correct tab from ?tab= query param
-  const tabParam = new URLSearchParams(location.search).get('tab');
-  if (tabParam) {
-    const el = document.querySelector(`[data-bs-target="#tab-${tabParam}"]`);
-    if (el) { new bootstrap.Tab(el).show(); }
-  }
-  // Confirm destructive actions
-  document.querySelectorAll('[data-confirm]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      if (!confirm(btn.dataset.confirm)) e.preventDefault();
-    });
-  });
-
-  // Notification polling (logged-in users only)
-  const notifBadge = document.getElementById('notif-badge');
-  if (notifBadge) {
-    let lastCount = null;
-    const toastContainer = document.createElement('div');
-    toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
-    toastContainer.style.zIndex = '1100';
-    document.body.appendChild(toastContainer);
-
-    function showToast(msg) {
-      const id = 'toast-' + Date.now();
-      toastContainer.insertAdjacentHTML('beforeend', `
+        function showToast(msg) {
+          const id = "toast-" + Date.now();
+          toastContainer.insertAdjacentHTML(
+            "beforeend",
+            `
         <div id="${id}" class="toast align-items-center text-bg-primary border-0" role="alert">
           <div class="d-flex">
             <div class="toast-body"><i class="bi bi-bell-fill me-2"></i>${msg}</div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
           </div>
-        </div>`);
-      new bootstrap.Toast(document.getElementById(id), { delay: 6000 }).show();
-    }
-
-    async function pollNotifications() {
-      try {
-        const resp = await fetch('/notifications/unread-count');
-        if (!resp.ok) return;
-        const { count } = await resp.json();
-        if (count > 0) {
-          notifBadge.textContent = count > 9 ? '9+' : count;
-          notifBadge.classList.remove('d-none');
-        } else {
-          notifBadge.classList.add('d-none');
+        </div>`,
+          );
+          new bootstrap.Toast(document.getElementById(id), { delay: 6000 }).show();
         }
-        if (lastCount !== null && count > lastCount) {
-          const diff = count - lastCount;
-          showToast(`You have ${diff} new bag update${diff > 1 ? 's' : ''} — <a href="/notifications" class="text-white">view</a>`);
-        }
-        lastCount = count;
-      } catch (_) {}
-    }
 
-    pollNotifications();
-    setInterval(pollNotifications, 30000);
-  }
-</script>
-</body>
+        async function pollNotifications() {
+          try {
+            const resp = await fetch("/notifications/unread-count");
+            if (!resp.ok) return;
+            const { count } = await resp.json();
+            if (count > 0) {
+              notifBadge.textContent = count > 9 ? "9+" : count;
+              notifBadge.classList.remove("d-none");
+            } else {
+              notifBadge.classList.add("d-none");
+            }
+            if (lastCount !== null && count > lastCount) {
+              const diff = count - lastCount;
+              showToast(
+                `You have ${diff} new bag update${diff > 1 ? "s" : ""} — <a href="/notifications" class="text-white">view</a>`,
+              );
+            }
+            lastCount = count;
+          } catch (_) {}
+        }
+
+        pollNotifications();
+        setInterval(pollNotifications, 30000);
+      }
+    </script>
+  </body>
 </html>

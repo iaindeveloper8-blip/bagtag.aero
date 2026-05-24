@@ -26,6 +26,9 @@ dist/
 .claude/
 memory/
 
+# Node
+node_modules/
+
 # Editor
 .vscode/
 .idea/

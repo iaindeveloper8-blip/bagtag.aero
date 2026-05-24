@@ -2,101 +2,110 @@
 {% block title %}Trips — bagtag.aero{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center mb-4">
-  <div>
-    <h1 class="h3 mb-0"><i class="bi bi-airplane me-2 text-primary"></i>My Trips</h1>
-    <p class="text-muted mb-0">{{ trips | length }} trip{{ 's' if trips | length != 1 }}</p>
+  <div class="d-flex align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0"><i class="bi bi-airplane me-2 text-primary"></i>My Trips</h1>
+      <p class="text-muted mb-0">{{ trips | length }} trip{{ 's' if trips | length != 1 }}</p>
+    </div>
+    <a href="/trips/new" class="btn btn-primary ms-auto"> <i class="bi bi-plus-lg me-1"></i>New Trip </a>
   </div>
-  <a href="/trips/new" class="btn btn-primary ms-auto">
-    <i class="bi bi-plus-lg me-1"></i>New Trip
-  </a>
-</div>
 
-{% if trips %}
-<div class="row g-3">
-  {% for trip in trips %}
-  <div class="col-md-6 col-lg-4">
-    <div class="card h-100"
-         {% if trip.return_date %}data-return-date="{{ trip.return_date.isoformat() }}"{% endif %}>
-      <div class="card-body">
-        <div class="d-flex align-items-start">
-          <div class="flex-grow-1">
-            <h5 class="card-title mb-1">
-              <a href="/trips/{{ trip.id }}" class="text-decoration-none text-dark stretched-link">{{ trip.name }}</a>
-            </h5>
-            {% if trip.trip_type %}
-            <span class="badge bg-light text-dark border small mb-2">{{ TRIP_TYPE_LABELS.get(trip.trip_type, trip.trip_type) }}</span>
-            {% endif %}
+  {% if trips %}
+    <div class="row g-3">
+      {% for trip in trips %}
+        <div class="col-md-6 col-lg-4">
+          <div
+            class="card h-100"
+            {% if trip.return_date %}data-return-date="{{ trip.return_date.isoformat() }}"{% endif %}
+          >
+            <div class="card-body">
+              <div class="d-flex align-items-start">
+                <div class="flex-grow-1">
+                  <h5 class="card-title mb-1">
+                    <a href="/trips/{{ trip.id }}" class="text-decoration-none text-dark stretched-link"
+                      >{{ trip.name }}</a
+                    >
+                  </h5>
+                  {% if trip.trip_type %}
+                    <span class="badge bg-light text-dark border small mb-2"
+                      >{{ TRIP_TYPE_LABELS.get(trip.trip_type, trip.trip_type) }}</span
+                    >
+                  {% endif %}
+                </div>
+              </div>
+
+              {% if trip.departure_date %}
+                <p class="text-muted small mb-2">
+                  <i class="bi bi-calendar3 me-1"></i>
+                  {{ trip.departure_date.strftime('%d %b %Y') }}
+                  {% if trip.return_date %}
+                    <span class="mx-1">→</span>{{ trip.return_date.strftime('%d %b %Y') }}
+                  {% endif %}
+                </p>
+              {% endif %}
+
+              {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
+              {% if root_flights %}
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                  {% for f in root_flights %}
+                    {% if f.is_cancelled %}
+                      <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+                        <i class="bi bi-x-circle me-1"></i><s>{{ f.departure_airport }} → {{ f.arrival_airport }}</s>
+                      </span>
+                      {% for r in f.reroutings %}
+                        {% if r.is_cancelled %}
+                          <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
+                            <i class="bi bi-x-circle me-1"></i
+                            ><s>{{ r.departure_airport }} → {{ r.arrival_airport }}</s>
+                          </span>
+                        {% else %}
+                          <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small">
+                            <i class="bi bi-arrow-return-right me-1"></i>{{ r.departure_airport }} →
+                            {{ r.arrival_airport }}
+                          </span>
+                        {% endif %}
+                      {% endfor %}
+                    {% else %}
+                      <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">
+                        <i class="bi bi-airplane me-1"></i>{{ f.departure_airport }} → {{ f.arrival_airport }}
+                      </span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <div class="d-flex gap-2 text-muted small mt-2">
+                {% if trip.trip_bags %}
+                  <span
+                    ><i class="bi bi-luggage me-1"></i>{{ trip.trip_bags | length }}
+                    bag{{ 's' if trip.trip_bags | length != 1 }}</span
+                  >
+                {% endif %}
+              </div>
+            </div>
           </div>
         </div>
-
-        {% if trip.departure_date %}
-        <p class="text-muted small mb-2">
-          <i class="bi bi-calendar3 me-1"></i>
-          {{ trip.departure_date.strftime('%d %b %Y') }}
-          {% if trip.return_date %}<span class="mx-1">→</span>{{ trip.return_date.strftime('%d %b %Y') }}{% endif %}
-        </p>
-        {% endif %}
-
-        {% set root_flights = trip.flights | selectattr('rerouted_from_id', 'none') | list %}
-        {% if root_flights %}
-        <div class="d-flex flex-wrap gap-1 mb-2">
-          {% for f in root_flights %}
-            {% if f.is_cancelled %}
-            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
-              <i class="bi bi-x-circle me-1"></i><s>{{ f.departure_airport }} → {{ f.arrival_airport }}</s>
-            </span>
-            {% for r in f.reroutings %}
-              {% if r.is_cancelled %}
-              <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle small">
-                <i class="bi bi-x-circle me-1"></i><s>{{ r.departure_airport }} → {{ r.arrival_airport }}</s>
-              </span>
-              {% else %}
-              <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small">
-                <i class="bi bi-arrow-return-right me-1"></i>{{ r.departure_airport }} → {{ r.arrival_airport }}
-              </span>
-              {% endif %}
-            {% endfor %}
-            {% else %}
-            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">
-              <i class="bi bi-airplane me-1"></i>{{ f.departure_airport }} → {{ f.arrival_airport }}
-            </span>
-            {% endif %}
-          {% endfor %}
-        </div>
-        {% endif %}
-
-        <div class="d-flex gap-2 text-muted small mt-2">
-          {% if trip.trip_bags %}
-          <span><i class="bi bi-luggage me-1"></i>{{ trip.trip_bags | length }} bag{{ 's' if trip.trip_bags | length != 1 }}</span>
-          {% endif %}
-        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-airplane display-4 d-block mb-3 text-primary opacity-50"></i>
+        <h5>No trips yet</h5>
+        <p>Plan your first trip, add flights and pack your bags.</p>
+        <a href="/trips/new" class="btn btn-primary mt-2"> <i class="bi bi-plus-lg me-1"></i>Create a Trip </a>
       </div>
     </div>
-  </div>
-  {% endfor %}
-</div>
-{% else %}
-<div class="card">
-  <div class="card-body text-center py-5 text-muted">
-    <i class="bi bi-airplane display-4 d-block mb-3 text-primary opacity-50"></i>
-    <h5>No trips yet</h5>
-    <p>Plan your first trip, add flights and pack your bags.</p>
-    <a href="/trips/new" class="btn btn-primary mt-2">
-      <i class="bi bi-plus-lg me-1"></i>Create a Trip
-    </a>
-  </div>
-</div>
-{% endif %}
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script>
-  // Pass today's date so Jinja can compare — set via JS rather than a server round-trip
-  document.querySelectorAll('[data-return-date]').forEach(el => {
-    if (el.dataset.returnDate < new Date().toISOString().slice(0, 10)) {
-      el.closest('.card').classList.add('opacity-75');
-    }
-  });
-</script>
+  <script>
+    // Pass today's date so Jinja can compare — set via JS rather than a server round-trip
+    document.querySelectorAll("[data-return-date]").forEach((el) => {
+      if (el.dataset.returnDate < new Date().toISOString().slice(0, 10)) {
+        el.closest(".card").classList.add("opacity-75");
+      }
+    });
+  </script>
 {% endblock %}

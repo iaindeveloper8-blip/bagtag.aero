@@ -2,315 +2,343 @@
 {% block title %}{{ bag.name }} — bagtag.aero{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/bags">My Bags</a></li>
-    <li class="breadcrumb-item active">{{ bag.name }}</li>
-  </ol>
-</nav>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/bags">My Bags</a></li>
+      <li class="breadcrumb-item active">{{ bag.name }}</li>
+    </ol>
+  </nav>
 
-<div class="d-flex align-items-start mb-4 gap-3">
-  <div class="flex-grow-1">
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-      <h1 class="h3 mb-0">{{ bag.name }}</h1>
-      {% set unresolved_incidents = incidents | rejectattr('resolution') | list if incidents else [] %}
-      {% if unresolved_incidents %}
-        {% set has_missing = unresolved_incidents | selectattr('collection_outcome', 'equalto', 'missing') | list %}
-        <span class="badge bg-danger fs-6">
-          <i class="bi bi-{% if has_missing %}question-circle{% else %}exclamation-triangle{% endif %} me-1"></i>
-          {% if has_missing %}Missing{% else %}Damaged{% endif %}
-        </span>
+  <div class="d-flex align-items-start mb-4 gap-3">
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="h3 mb-0">{{ bag.name }}</h1>
+        {% set unresolved_incidents = incidents | rejectattr('resolution') | list if incidents else [] %}
+        {% if unresolved_incidents %}
+          {% set has_missing = unresolved_incidents | selectattr('collection_outcome', 'equalto', 'missing') | list %}
+          <span class="badge bg-danger fs-6">
+            <i class="bi bi-{% if has_missing %}question-circle{% else %}exclamation-triangle{% endif %} me-1"></i>
+            {% if has_missing %}Missing{% else %}Damaged{% endif %}
+          </span>
+        {% endif %}
+      </div>
+      {% if bag.brand or bag.model %}
+        <p class="text-muted mb-1">
+          {{ bag.brand or '' }}{% if bag.brand and bag.model %}&mdash;{% endif %}{{ bag.model or '' }}
+        </p>
       {% endif %}
     </div>
-    {% if bag.brand or bag.model %}
-    <p class="text-muted mb-1">{{ bag.brand or '' }}{% if bag.brand and bag.model %} &mdash; {% endif %}{{ bag.model or '' }}</p>
-    {% endif %}
-  </div>
-  <div class="d-flex gap-2 flex-shrink-0">
-    <a href="/b/{{ bag.public_token }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
-      <i class="bi bi-box-arrow-up-right me-1"></i>Public page
-    </a>
-    <a href="/bags/{{ bag.id }}/edit" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-pencil me-1"></i>Edit
-    </a>
-    <form method="post" action="/bags/{{ bag.id }}/delete" class="d-inline">
-      <button type="submit" class="btn btn-outline-danger btn-sm"
-              data-confirm="Delete this bag? This cannot be undone.">
-        <i class="bi bi-trash me-1"></i>Delete
-      </button>
-    </form>
-  </div>
-</div>
-
-<div class="row g-4">
-  <!-- Images column -->
-  <div class="col-md-5">
-    {% if bag.primary_image %}
-    <img src="/static/uploads/{{ bag.primary_image.filename }}"
-         class="img-hero mb-3" alt="{{ bag.name }}">
-    {% else %}
-    <div class="d-flex align-items-center justify-content-center bg-light mb-3" style="height:240px;border-radius:.5rem;">
-      <i class="bi bi-luggage display-2 text-secondary opacity-40"></i>
-    </div>
-    {% endif %}
-
-    <!-- Thumbnails -->
-    {% if bag.images | length > 1 %}
-    <div class="d-flex flex-wrap gap-2 mb-3">
-      {% for img in bag.images %}
-      <div class="position-relative">
-        <img src="/static/uploads/{{ img.filename }}" class="img-thumb" alt="">
-        {% if img.is_primary %}
-        <span class="position-absolute top-0 start-0 badge bg-primary m-1" style="font-size:.6rem">✓</span>
-        {% else %}
-        <form method="post" action="/bags/{{ bag.id }}/images/{{ img.id }}/set-primary" class="d-inline">
-          <button type="submit" class="position-absolute top-0 start-0 btn btn-xs btn-light m-1 p-0 px-1"
-                  style="font-size:.65rem" title="Set as primary">★</button>
-        </form>
-        {% endif %}
-        <form method="post" action="/bags/{{ bag.id }}/images/{{ img.id }}/delete" class="d-inline">
-          <button type="submit" class="position-absolute top-0 end-0 btn btn-danger btn-sm m-1 p-0 px-1"
-                  style="font-size:.65rem" title="Remove" data-confirm="Remove this image?">×</button>
-        </form>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Upload form -->
-    <div class="card">
-      <div class="card-header bg-light small fw-semibold">
-        <i class="bi bi-camera me-1"></i>Add Photo
-      </div>
-      <div class="card-body">
-        <form method="post" action="/bags/{{ bag.id }}/images" enctype="multipart/form-data">
-          <div class="mb-2">
-            <input type="file" class="form-control form-control-sm" name="file"
-                   accept="image/jpeg,image/png,image/webp,image/gif" required>
-          </div>
-          <div class="mb-2">
-            <input type="text" class="form-control form-control-sm" name="description"
-                   placeholder="Caption (optional)" maxlength="500">
-          </div>
-          <button type="submit" class="btn btn-sm btn-primary w-100">Upload</button>
-        </form>
-      </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+      <a href="/b/{{ bag.public_token }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
+        <i class="bi bi-box-arrow-up-right me-1"></i>Public page
+      </a>
+      <a href="/bags/{{ bag.id }}/edit" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+      <form method="post" action="/bags/{{ bag.id }}/delete" class="d-inline">
+        <button
+          type="submit"
+          class="btn btn-outline-danger btn-sm"
+          data-confirm="Delete this bag? This cannot be undone."
+        >
+          <i class="bi bi-trash me-1"></i>Delete
+        </button>
+      </form>
     </div>
   </div>
 
-  <!-- Details column -->
-  <div class="col-md-7">
-    <!-- Details -->
-    {% if bag.volume_liters or bag.tare_weight_kg %}
-    <div class="card mb-3">
-      <div class="card-header bg-light small fw-semibold"><i class="bi bi-info-circle me-1"></i>Details</div>
-      <div class="card-body">
-        <dl class="row iata-grid mb-0">
-          {% if bag.volume_liters %}
-          <dt class="col-sm-4">Volume</dt>
-          <dd class="col-sm-8">{{ bag.volume_liters }} litres</dd>
-          {% endif %}
-          {% if bag.tare_weight_kg %}
-          <dt class="col-sm-4">Tare weight</dt>
-          <dd class="col-sm-8">{{ bag.tare_weight_kg }} kg</dd>
-          {% endif %}
-        </dl>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Purchase -->
-    {% if bag.purchased_at or bag.purchase_price or bag.receipt_filename %}
-    <div class="card mb-3">
-      <div class="card-header bg-light small fw-semibold"><i class="bi bi-receipt me-1"></i>Purchase</div>
-      <div class="card-body">
-        <dl class="row iata-grid mb-0">
-          {% if bag.purchased_at %}
-          <dt class="col-sm-4">Date</dt>
-          <dd class="col-sm-8">{{ bag.purchased_at.strftime('%d %b %Y') }}</dd>
-          {% endif %}
-          {% if bag.purchase_price %}
-          <dt class="col-sm-4">Price paid</dt>
-          <dd class="col-sm-8">£{{ '%.2f' | format(bag.purchase_price) }}</dd>
-          {% endif %}
-          {% if bag.receipt_filename %}
-          <dt class="col-sm-4">Receipt</dt>
-          <dd class="col-sm-8">
-            <a href="/static/uploads/{{ bag.receipt_filename }}" target="_blank" rel="noopener">
-              <i class="bi bi-paperclip me-1"></i>{{ bag.receipt_original_filename }}
-            </a>
-          </dd>
-          {% endif %}
-        </dl>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- IATA Identification -->
-    <div class="card mb-3">
-      <div class="card-header bg-light small fw-semibold">
-        <i class="bi bi-tag me-1"></i>IATA Baggage Identification
-      </div>
-      <div class="card-body">
-        {% if bag.iata_code %}
-        <div class="mb-3 p-2 bg-light rounded text-center">
-          <span class="fw-bold font-monospace fs-4 letter-spacing-1">{{ bag.iata_code }}</span>
-          <div class="text-muted small">IATA identification code</div>
+  <div class="row g-4">
+    <!-- Images column -->
+    <div class="col-md-5">
+      {% if bag.primary_image %}
+        <img src="/static/uploads/{{ bag.primary_image.filename }}" class="img-hero mb-3" alt="{{ bag.name }}" />
+      {% else %}
+        <div
+          class="d-flex align-items-center justify-content-center bg-light mb-3"
+          style="height:240px;border-radius:.5rem;"
+        >
+          <i class="bi bi-luggage display-2 text-secondary opacity-40"></i>
         </div>
-        {% endif %}
+      {% endif %}
 
-        <dl class="row iata-grid mb-0">
-          {% macro iata_row(label, value) %}
-          {% if value %}
-          <dt class="col-sm-5">{{ label }}</dt>
-          <dd class="col-sm-7">{{ LABEL_MAP.get(value, value) if value else '—' }}</dd>
-          {% endif %}
-          {% endmacro %}
-
-          {{ iata_row('Colour', bag.color) }}
-          {{ iata_row('Type', bag.bag_type) }}
-          {% if bag.material %}
-          {{ iata_row('Material', bag.material) }}
-          {% else %}
-          {% if bag.bag_type %}
-          <dt class="col-sm-5">Material</dt>
-          <dd class="col-sm-7">Soft (default)</dd>
-          {% endif %}
-          {% endif %}
-        </dl>
-
-        <!-- External elements -->
-        {% set ext = [] %}
-        {% if bag.is_cabin_size %}{% set _ = ext.append('K — Cabin size') %}{% endif %}
-        {% if bag.has_combination_lock %}{% set _ = ext.append('C — Combination locks') %}{% endif %}
-        {% if bag.has_retractable_handle %}{% set _ = ext.append('H — Retractable handles') %}{% endif %}
-        {% if bag.has_closing_straps %}{% set _ = ext.append('S — Closing straps') %}{% endif %}
-        {% if bag.has_wheels %}{% set _ = ext.append('W — Wheels / rollers') %}{% endif %}
-        {% if bag.bag_type %}
-        <hr class="my-2">
-        <div class="d-flex flex-wrap gap-2">
-          {% if ext %}
-          {% for e in ext %}
-          <span class="badge bg-secondary">{{ e }}</span>
-          {% endfor %}
-          {% else %}
-          <span class="badge bg-light text-dark border">X — No external elements</span>
-          {% endif %}
-        </div>
-        {% endif %}
-
-      </div>
-    </div>
-
-    {% if bag.notes %}
-    <div class="card mb-3">
-      <div class="card-header bg-light small fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
-      <div class="card-body small" style="white-space:pre-wrap">{{ bag.notes }}</div>
-    </div>
-    {% endif %}
-
-    {% if incidents %}
-    {% set unresolved = incidents | rejectattr('resolution') | list %}
-    <div class="card mb-3 {% if unresolved %}border-danger{% endif %}">
-      <div class="card-header bg-light small fw-semibold d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-exclamation-triangle me-1 text-danger"></i>Damage &amp; Loss History</span>
-        {% if unresolved %}
-        <span class="badge bg-danger">{{ unresolved | length }} open</span>
-        {% endif %}
-      </div>
-      <div class="card-body p-0">
-        {% for inc in incidents %}
-        {% set trip = inc.checkin.trip %}
-        <div class="p-3 {% if not loop.last %}border-bottom{% endif %}">
-          <!-- Trip context -->
-          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
-            <div>
-              <a href="/trips/{{ trip.id }}?tab=bags" class="fw-semibold text-decoration-none">
-                {{ trip.name }}
-              </a>
-              {% if trip.departure_date %}
-              <span class="text-muted small ms-1">{{ trip.departure_date.strftime('%b %Y') }}</span>
-              {% endif %}
-            </div>
-            <div class="d-flex gap-1 flex-wrap">
-              {% if inc.collection_outcome == 'damaged' %}
-              <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Damaged</span>
+      <!-- Thumbnails -->
+      {% if bag.images | length > 1 %}
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          {% for img in bag.images %}
+            <div class="position-relative">
+              <img src="/static/uploads/{{ img.filename }}" class="img-thumb" alt="" />
+              {% if img.is_primary %}
+                <span class="position-absolute top-0 start-0 badge bg-primary m-1" style="font-size:.6rem">✓</span>
               {% else %}
-              <span class="badge bg-danger"><i class="bi bi-question-circle me-1"></i>Missing</span>
+                <form method="post" action="/bags/{{ bag.id }}/images/{{ img.id }}/set-primary" class="d-inline">
+                  <button
+                    type="submit"
+                    class="position-absolute top-0 start-0 btn btn-xs btn-light m-1 p-0 px-1"
+                    style="font-size:.65rem"
+                    title="Set as primary"
+                  >
+                    ★
+                  </button>
+                </form>
               {% endif %}
-              {% if inc.resolution == 'returned' %}
-              <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Returned</span>
-              {% elif inc.resolution == 'repaired' %}
-              <span class="badge bg-success"><i class="bi bi-tools me-1"></i>Repaired</span>
-              {% endif %}
+              <form method="post" action="/bags/{{ bag.id }}/images/{{ img.id }}/delete" class="d-inline">
+                <button
+                  type="submit"
+                  class="position-absolute top-0 end-0 btn btn-danger btn-sm m-1 p-0 px-1"
+                  style="font-size:.65rem"
+                  title="Remove"
+                  data-confirm="Remove this image?"
+                >
+                  ×
+                </button>
+              </form>
             </div>
-          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
 
-          <!-- PIR details -->
-          {% if inc.licence_plate_number or inc.pir_reference or inc.pir_receipt_filename %}
-          <dl class="row mb-2" style="font-size:.85rem">
-            {% if inc.licence_plate_number %}
-            <dt class="col-sm-4 text-muted fw-normal">Licence plate</dt>
-            <dd class="col-sm-8 font-monospace">{{ inc.licence_plate_number }}</dd>
-            {% endif %}
-            {% if inc.pir_reference %}
-            <dt class="col-sm-4 text-muted fw-normal">PIR reference</dt>
-            <dd class="col-sm-8 font-monospace">{{ inc.pir_reference }}</dd>
-            {% endif %}
-            {% if inc.pir_receipt_filename %}
-            <dt class="col-sm-4 text-muted fw-normal">PIR receipt</dt>
-            <dd class="col-sm-8">
-              <a href="/static/uploads/{{ inc.pir_receipt_filename }}" target="_blank" rel="noopener">
-                <i class="bi bi-paperclip me-1"></i>View
-              </a>
-            </dd>
+      <!-- Upload form -->
+      <div class="card">
+        <div class="card-header bg-light small fw-semibold"><i class="bi bi-camera me-1"></i>Add Photo</div>
+        <div class="card-body">
+          <form method="post" action="/bags/{{ bag.id }}/images" enctype="multipart/form-data">
+            <div class="mb-2">
+              <input
+                type="file"
+                class="form-control form-control-sm"
+                name="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                required
+              />
+            </div>
+            <div class="mb-2">
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                name="description"
+                placeholder="Caption (optional)"
+                maxlength="500"
+              />
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary w-100">Upload</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details column -->
+    <div class="col-md-7">
+      <!-- Details -->
+      {% if bag.volume_liters or bag.tare_weight_kg %}
+        <div class="card mb-3">
+          <div class="card-header bg-light small fw-semibold"><i class="bi bi-info-circle me-1"></i>Details</div>
+          <div class="card-body">
+            <dl class="row iata-grid mb-0">
+              {% if bag.volume_liters %}
+                <dt class="col-sm-4">Volume</dt>
+                <dd class="col-sm-8">{{ bag.volume_liters }} litres</dd>
+              {% endif %}
+              {% if bag.tare_weight_kg %}
+                <dt class="col-sm-4">Tare weight</dt>
+                <dd class="col-sm-8">{{ bag.tare_weight_kg }} kg</dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Purchase -->
+      {% if bag.purchased_at or bag.purchase_price or bag.receipt_filename %}
+        <div class="card mb-3">
+          <div class="card-header bg-light small fw-semibold"><i class="bi bi-receipt me-1"></i>Purchase</div>
+          <div class="card-body">
+            <dl class="row iata-grid mb-0">
+              {% if bag.purchased_at %}
+                <dt class="col-sm-4">Date</dt>
+                <dd class="col-sm-8">{{ bag.purchased_at.strftime('%d %b %Y') }}</dd>
+              {% endif %}
+              {% if bag.purchase_price %}
+                <dt class="col-sm-4">Price paid</dt>
+                <dd class="col-sm-8">£{{ '%.2f' | format(bag.purchase_price) }}</dd>
+              {% endif %}
+              {% if bag.receipt_filename %}
+                <dt class="col-sm-4">Receipt</dt>
+                <dd class="col-sm-8">
+                  <a href="/static/uploads/{{ bag.receipt_filename }}" target="_blank" rel="noopener">
+                    <i class="bi bi-paperclip me-1"></i>{{ bag.receipt_original_filename }}
+                  </a>
+                </dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- IATA Identification -->
+      <div class="card mb-3">
+        <div class="card-header bg-light small fw-semibold">
+          <i class="bi bi-tag me-1"></i>IATA Baggage Identification
+        </div>
+        <div class="card-body">
+          {% if bag.iata_code %}
+            <div class="mb-3 p-2 bg-light rounded text-center">
+              <span class="fw-bold font-monospace fs-4 letter-spacing-1">{{ bag.iata_code }}</span>
+              <div class="text-muted small">IATA identification code</div>
+            </div>
+          {% endif %}
+
+          <dl class="row iata-grid mb-0">
+            {% macro iata_row(label, value) %}
+              {% if value %}
+                <dt class="col-sm-5">{{ label }}</dt>
+                <dd class="col-sm-7">{{ LABEL_MAP.get(value, value) if value else '—' }}</dd>
+              {% endif %}
+            {% endmacro %}
+
+            {{ iata_row('Colour', bag.color) }}
+            {{ iata_row('Type', bag.bag_type) }}
+            {% if bag.material %}
+              {{ iata_row('Material', bag.material) }}
+            {% else %}
+              {% if bag.bag_type %}
+                <dt class="col-sm-5">Material</dt>
+                <dd class="col-sm-7">Soft (default)</dd>
+              {% endif %}
             {% endif %}
           </dl>
-          {% endif %}
 
-          <!-- Damage photos -->
-          {% if inc.damage_photos %}
-          <div class="d-flex flex-wrap gap-1 mb-2">
-            {% for photo in inc.damage_photos %}
-            <a href="/static/uploads/{{ photo.filename }}" target="_blank" rel="noopener">
-              <img src="/static/uploads/{{ photo.filename }}"
-                   style="width:56px;height:56px;object-fit:cover;border-radius:.375rem;"
-                   alt="Damage photo">
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-
-          <!-- Resolve form (only for unresolved) -->
-          {% if not inc.resolution %}
-          <div class="d-flex gap-2 mt-2 flex-wrap">
-            {% if inc.collection_outcome == 'missing' %}
-            <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
-              <input type="hidden" name="resolution" value="returned">
-              <button type="submit" class="btn btn-sm btn-outline-success">
-                <i class="bi bi-bag-check me-1"></i>Mark as Returned
-              </button>
-            </form>
-            {% elif inc.collection_outcome == 'damaged' %}
-            <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
-              <input type="hidden" name="resolution" value="repaired">
-              <button type="submit" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-tools me-1"></i>Mark as Repaired
-              </button>
-            </form>
-            {% endif %}
-          </div>
-          {% else %}
-          <div class="text-muted small mt-1">
-            Resolved {{ inc.resolved_at.strftime('%d %b %Y') if inc.resolved_at else '' }}
-          </div>
+          <!-- External elements -->
+          {% set ext = [] %}
+          {% if bag.is_cabin_size %}{% set _ = ext.append('K — Cabin size') %}{% endif %}
+          {% if bag.has_combination_lock %}{% set _ = ext.append('C — Combination locks') %}{% endif %}
+          {% if bag.has_retractable_handle %}{% set _ = ext.append('H — Retractable handles') %}{% endif %}
+          {% if bag.has_closing_straps %}{% set _ = ext.append('S — Closing straps') %}{% endif %}
+          {% if bag.has_wheels %}{% set _ = ext.append('W — Wheels / rollers') %}{% endif %}
+          {% if bag.bag_type %}
+            <hr class="my-2" />
+            <div class="d-flex flex-wrap gap-2">
+              {% if ext %}
+                {% for e in ext %}
+                  <span class="badge bg-secondary">{{ e }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="badge bg-light text-dark border">X — No external elements</span>
+              {% endif %}
+            </div>
           {% endif %}
         </div>
-        {% endfor %}
       </div>
-    </div>
-    {% endif %}
-  </div>
-</div>
 
+      {% if bag.notes %}
+        <div class="card mb-3">
+          <div class="card-header bg-light small fw-semibold"><i class="bi bi-sticky me-1"></i>Notes</div>
+          <div class="card-body small" style="white-space:pre-wrap">{{ bag.notes }}</div>
+        </div>
+      {% endif %}
+
+      {% if incidents %}
+        {% set unresolved = incidents | rejectattr('resolution') | list %}
+        <div class="card mb-3 {% if unresolved %}border-danger{% endif %}">
+          <div class="card-header bg-light small fw-semibold d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-exclamation-triangle me-1 text-danger"></i>Damage &amp; Loss History</span>
+            {% if unresolved %}
+              <span class="badge bg-danger">{{ unresolved | length }} open</span>
+            {% endif %}
+          </div>
+          <div class="card-body p-0">
+            {% for inc in incidents %}
+              {% set trip = inc.checkin.trip %}
+              <div class="p-3 {% if not loop.last %}border-bottom{% endif %}">
+                <!-- Trip context -->
+                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
+                  <div>
+                    <a href="/trips/{{ trip.id }}?tab=bags" class="fw-semibold text-decoration-none">
+                      {{ trip.name }}
+                    </a>
+                    {% if trip.departure_date %}
+                      <span class="text-muted small ms-1">{{ trip.departure_date.strftime('%b %Y') }}</span>
+                    {% endif %}
+                  </div>
+                  <div class="d-flex gap-1 flex-wrap">
+                    {% if inc.collection_outcome == 'damaged' %}
+                      <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Damaged</span>
+                    {% else %}
+                      <span class="badge bg-danger"><i class="bi bi-question-circle me-1"></i>Missing</span>
+                    {% endif %}
+                    {% if inc.resolution == 'returned' %}
+                      <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Returned</span>
+                    {% elif inc.resolution == 'repaired' %}
+                      <span class="badge bg-success"><i class="bi bi-tools me-1"></i>Repaired</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- PIR details -->
+                {% if inc.licence_plate_number or inc.pir_reference or inc.pir_receipt_filename %}
+                  <dl class="row mb-2" style="font-size:.85rem">
+                    {% if inc.licence_plate_number %}
+                      <dt class="col-sm-4 text-muted fw-normal">Licence plate</dt>
+                      <dd class="col-sm-8 font-monospace">{{ inc.licence_plate_number }}</dd>
+                    {% endif %}
+                    {% if inc.pir_reference %}
+                      <dt class="col-sm-4 text-muted fw-normal">PIR reference</dt>
+                      <dd class="col-sm-8 font-monospace">{{ inc.pir_reference }}</dd>
+                    {% endif %}
+                    {% if inc.pir_receipt_filename %}
+                      <dt class="col-sm-4 text-muted fw-normal">PIR receipt</dt>
+                      <dd class="col-sm-8">
+                        <a href="/static/uploads/{{ inc.pir_receipt_filename }}" target="_blank" rel="noopener">
+                          <i class="bi bi-paperclip me-1"></i>View
+                        </a>
+                      </dd>
+                    {% endif %}
+                  </dl>
+                {% endif %}
+
+                <!-- Damage photos -->
+                {% if inc.damage_photos %}
+                  <div class="d-flex flex-wrap gap-1 mb-2">
+                    {% for photo in inc.damage_photos %}
+                      <a href="/static/uploads/{{ photo.filename }}" target="_blank" rel="noopener">
+                        <img
+                          src="/static/uploads/{{ photo.filename }}"
+                          style="width:56px;height:56px;object-fit:cover;border-radius:.375rem;"
+                          alt="Damage photo"
+                        />
+                      </a>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                <!-- Resolve form (only for unresolved) -->
+                {% if not inc.resolution %}
+                  <div class="d-flex gap-2 mt-2 flex-wrap">
+                    {% if inc.collection_outcome == 'missing' %}
+                      <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
+                        <input type="hidden" name="resolution" value="returned" />
+                        <button type="submit" class="btn btn-sm btn-outline-success">
+                          <i class="bi bi-bag-check me-1"></i>Mark as Returned
+                        </button>
+                      </form>
+                    {% elif inc.collection_outcome == 'damaged' %}
+                      <form method="post" action="/bags/{{ bag.id }}/incidents/{{ inc.id }}/resolve" class="d-inline">
+                        <input type="hidden" name="resolution" value="repaired" />
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                          <i class="bi bi-tools me-1"></i>Mark as Repaired
+                        </button>
+                      </form>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <div class="text-muted small mt-1">
+                    Resolved {{ inc.resolved_at.strftime('%d %b %Y') if inc.resolved_at else '' }}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
 {% endblock %}

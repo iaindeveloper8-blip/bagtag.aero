@@ -2,81 +2,87 @@
 {% block title %}My Bags — bagtag.aero{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center mb-4">
-  <div>
-    <h1 class="h3 mb-0"><i class="bi bi-luggage-fill me-2 text-primary"></i>My Bags</h1>
-    <p class="text-muted mb-0">{{ bags | length }} bag{{ 's' if bags | length != 1 }}</p>
+  <div class="d-flex align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0"><i class="bi bi-luggage-fill me-2 text-primary"></i>My Bags</h1>
+      <p class="text-muted mb-0">{{ bags | length }} bag{{ 's' if bags | length != 1 }}</p>
+    </div>
+    <a href="/bags/new" class="btn btn-primary ms-auto"> <i class="bi bi-plus-lg me-1"></i>Add Bag </a>
   </div>
-  <a href="/bags/new" class="btn btn-primary ms-auto">
-    <i class="bi bi-plus-lg me-1"></i>Add Bag
-  </a>
-</div>
 
-{% if bags %}
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-  {% for bag in bags %}
-  <div class="col">
-    <div class="card h-100">
-      {% if bag.primary_image %}
-      <img src="/static/uploads/{{ bag.primary_image.filename }}"
-           class="card-img-top" style="height:180px;object-fit:cover;"
-           alt="{{ bag.name }}">
-      {% else %}
-      <div class="d-flex align-items-center justify-content-center bg-light" style="height:180px;border-radius:.375rem .375rem 0 0;">
-        <i class="bi bi-luggage display-3 text-secondary opacity-50"></i>
-      </div>
-      {% endif %}
-      <div class="card-body">
-        <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
-          <a href="/bags/{{ bag.id }}" class="text-decoration-none text-dark stretched-link">{{ bag.name }}</a>
-          {% set outcome = incident_status.get(bag.id) %}
-          {% if outcome == 'missing' %}
-          <span class="badge bg-danger" style="font-size:.65rem;position:relative;z-index:1">
-            <i class="bi bi-question-circle me-1"></i>Missing
-          </span>
-          {% elif outcome == 'damaged' %}
-          <span class="badge bg-danger" style="font-size:.65rem;position:relative;z-index:1">
-            <i class="bi bi-exclamation-triangle me-1"></i>Damaged
-          </span>
-          {% endif %}
-        </h5>
-        {% if bag.brand or bag.model %}
-        <p class="text-muted small mb-2">{{ bag.brand or '' }}{% if bag.brand and bag.model %} &mdash; {% endif %}{{ bag.model or '' }}</p>
-        {% endif %}
-        <div class="d-flex flex-wrap gap-1 mt-2">
-          {% if bag.size_category %}
-          <span class="badge bg-primary badge-category">{{ LABEL_MAP.get(bag.size_category, bag.size_category) }}</span>
-          {% endif %}
-          {% if bag.bag_type and bag.bag_type != 'other' %}
-          <span class="badge bg-secondary badge-category">{{ LABEL_MAP.get(bag.bag_type, bag.bag_type) }}</span>
-          {% endif %}
-          {% if bag.volume_liters %}
-          <span class="badge bg-light text-dark border badge-category">{{ bag.volume_liters | int }}L</span>
-          {% endif %}
-          {% if bag.tare_weight_kg %}
-          <span class="badge bg-light text-dark border badge-category">{{ bag.tare_weight_kg }}kg</span>
-          {% endif %}
+  {% if bags %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+      {% for bag in bags %}
+        <div class="col">
+          <div class="card h-100">
+            {% if bag.primary_image %}
+              <img
+                src="/static/uploads/{{ bag.primary_image.filename }}"
+                class="card-img-top"
+                style="height:180px;object-fit:cover;"
+                alt="{{ bag.name }}"
+              />
+            {% else %}
+              <div
+                class="d-flex align-items-center justify-content-center bg-light"
+                style="height:180px;border-radius:.375rem .375rem 0 0;"
+              >
+                <i class="bi bi-luggage display-3 text-secondary opacity-50"></i>
+              </div>
+            {% endif %}
+            <div class="card-body">
+              <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
+                <a href="/bags/{{ bag.id }}" class="text-decoration-none text-dark stretched-link">{{ bag.name }}</a>
+                {% set outcome = incident_status.get(bag.id) %}
+                {% if outcome == 'missing' %}
+                  <span class="badge bg-danger" style="font-size:.65rem;position:relative;z-index:1">
+                    <i class="bi bi-question-circle me-1"></i>Missing
+                  </span>
+                {% elif outcome == 'damaged' %}
+                  <span class="badge bg-danger" style="font-size:.65rem;position:relative;z-index:1">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Damaged
+                  </span>
+                {% endif %}
+              </h5>
+              {% if bag.brand or bag.model %}
+                <p class="text-muted small mb-2">
+                  {{ bag.brand or '' }}{% if bag.brand and bag.model %}&mdash;{% endif %}{{ bag.model or '' }}
+                </p>
+              {% endif %}
+              <div class="d-flex flex-wrap gap-1 mt-2">
+                {% if bag.size_category %}
+                  <span class="badge bg-primary badge-category"
+                    >{{ LABEL_MAP.get(bag.size_category, bag.size_category) }}</span
+                  >
+                {% endif %}
+                {% if bag.bag_type and bag.bag_type != 'other' %}
+                  <span class="badge bg-secondary badge-category">{{ LABEL_MAP.get(bag.bag_type, bag.bag_type) }}</span>
+                {% endif %}
+                {% if bag.volume_liters %}
+                  <span class="badge bg-light text-dark border badge-category">{{ bag.volume_liters | int }}L</span>
+                {% endif %}
+                {% if bag.tare_weight_kg %}
+                  <span class="badge bg-light text-dark border badge-category">{{ bag.tare_weight_kg }}kg</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 d-flex gap-2">
+              <a href="/bags/{{ bag.id }}/edit" class="btn btn-sm btn-outline-secondary flex-fill">
+                <i class="bi bi-pencil me-1"></i>Edit
+              </a>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="card-footer bg-transparent border-0 d-flex gap-2">
-        <a href="/bags/{{ bag.id }}/edit" class="btn btn-sm btn-outline-secondary flex-fill">
-          <i class="bi bi-pencil me-1"></i>Edit
-        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-luggage display-4 d-block mb-3 text-primary opacity-50"></i>
+        <h5>No bags yet</h5>
+        <p>Register your first piece of luggage to get started.</p>
+        <a href="/bags/new" class="btn btn-primary mt-2"> <i class="bi bi-plus-lg me-1"></i>Add Your First Bag </a>
       </div>
     </div>
-  </div>
-  {% endfor %}
-</div>
-{% else %}
-<div class="card">
-  <div class="card-body text-center py-5 text-muted">
-    <i class="bi bi-luggage display-4 d-block mb-3 text-primary opacity-50"></i>
-    <h5>No bags yet</h5>
-    <p>Register your first piece of luggage to get started.</p>
-    <a href="/bags/new" class="btn btn-primary mt-2">
-      <i class="bi bi-plus-lg me-1"></i>Add Your First Bag
-    </a>
-  </div>
-</div>
-{% endif %}
+  {% endif %}
 {% endblock %}

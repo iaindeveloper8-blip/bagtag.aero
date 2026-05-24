@@ -2,200 +2,245 @@
 {% block title %}{% if active_checkin %}Update{% else %}Check In{% endif %} — {{ trip.name }} — bagtag.aero{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/trips">Trips</a></li>
-    <li class="breadcrumb-item"><a href="/trips/{{ trip.id }}?tab=bags">{{ trip.name }}</a></li>
-    <li class="breadcrumb-item active">{% if active_checkin %}Update Check In{% else %}Check In Bags{% endif %}</li>
-  </ol>
-</nav>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/trips">Trips</a></li>
+      <li class="breadcrumb-item"><a href="/trips/{{ trip.id }}?tab=bags">{{ trip.name }}</a></li>
+      <li class="breadcrumb-item active">{% if active_checkin %}Update Check In{% else %}Check In Bags{% endif %}</li>
+    </ol>
+  </nav>
 
-<h1 class="h4 mb-1">
-  <i class="bi bi-tag-fill me-2 text-primary"></i>
-  {% if active_checkin %}Update Check In{% else %}Check In Bags{% endif %}
-</h1>
-<p class="text-muted mb-4">
-  Mark each bag as carry-on or checked in. For checked bags, enter the licence plate number
-  from your baggage receipt (the 10-digit code), and optionally the weight and a photo of the receipt.
-</p>
+  <h1 class="h4 mb-1">
+    <i class="bi bi-tag-fill me-2 text-primary"></i>
+    {% if active_checkin %}Update Check In{% else %}Check In Bags{% endif %}
+  </h1>
+  <p class="text-muted mb-4">
+    Mark each bag as carry-on or checked in. For checked bags, enter the licence plate number from your baggage receipt
+    (the 10-digit code), and optionally the weight and a photo of the receipt.
+  </p>
 
-{% set active_trip_bags = trip.trip_bags | selectattr('is_active') | list %}
+  {% set active_trip_bags = trip.trip_bags | selectattr('is_active') | list %}
 
-{% if cross_trip_checkin %}
-<div class="alert alert-warning">
-  <i class="bi bi-exclamation-triangle me-1"></i>
-  You have an active check-in on <a href="/trips/{{ cross_trip_checkin.trip.id }}?tab=bags" class="alert-link">{{ cross_trip_checkin.trip.name }}</a>.
-  Consider collecting those bags first, but you can still proceed.
-</div>
-{% endif %}
-
-{% if not active_trip_bags %}
-<div class="alert alert-info">
-  <i class="bi bi-info-circle me-1"></i>No active bags on this trip.
-  <a href="/trips/{{ trip.id }}?tab=bags" class="alert-link">Assign bags</a> first.
-</div>
-{% else %}
-<form method="post" action="/trips/{{ trip.id }}/checkin" enctype="multipart/form-data">
-
-  {% if available_flights %}
-  {% set outward = available_flights | selectattr('is_return', 'equalto', false) | list %}
-  {% set return_ = available_flights | selectattr('is_return', 'equalto', true) | list %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <h6 class="mb-3"><i class="bi bi-airplane me-2 text-primary"></i>Flights covered by this check-in</h6>
-      {% if outward %}
-      <div class="mb-2">
-        <div class="small text-muted fw-semibold mb-1">Outward</div>
-        {% for f in outward %}
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" name="flight_ids"
-                 value="{{ f.id }}" id="flight_{{ f.id }}"
-                 {% if f.id in selected_flight_ids %}checked{% endif %}>
-          <label class="form-check-label small" for="flight_{{ f.id }}">
-            {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> — {% endif %}
-            {{ f.departure_airport }} → {{ f.arrival_airport }}
-            {% if f.departure_at %}<span class="text-muted">{{ f.departure_at.strftime('%d %b %H:%M') }}</span>{% endif %}
-          </label>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-      {% if return_ %}
-      <div>
-        <div class="small text-muted fw-semibold mb-1">Return</div>
-        {% for f in return_ %}
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" name="flight_ids"
-                 value="{{ f.id }}" id="flight_{{ f.id }}"
-                 {% if f.id in selected_flight_ids %}checked{% endif %}>
-          <label class="form-check-label small" for="flight_{{ f.id }}">
-            {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> — {% endif %}
-            {{ f.departure_airport }} → {{ f.arrival_airport }}
-            {% if f.departure_at %}<span class="text-muted">{{ f.departure_at.strftime('%d %b %H:%M') }}</span>{% endif %}
-          </label>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
+  {% if cross_trip_checkin %}
+    <div class="alert alert-warning">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      You have an active check-in on
+      <a href="/trips/{{ cross_trip_checkin.trip.id }}?tab=bags" class="alert-link"
+        >{{ cross_trip_checkin.trip.name }}</a
+      >. Consider collecting those bags first, but you can still proceed.
     </div>
-  </div>
   {% endif %}
 
-  <div class="row g-3 mb-4">
-    {% for tb in active_trip_bags %}
-    {% set bag = tb.bag %}
-    {% set bc = bag_checkin_by_bag.get(bag.id) %}
-    {% set is_checked = bc and bc.status == 'checked_in' %}
-
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex gap-3 align-items-start">
-
-            {% if bag.primary_image %}
-            <img src="/static/uploads/{{ bag.primary_image.filename }}"
-                 style="width:64px;height:64px;object-fit:cover;border-radius:.375rem;flex-shrink:0;"
-                 alt="{{ bag.name }}">
-            {% else %}
-            <div class="d-flex align-items-center justify-content-center bg-light flex-shrink-0"
-                 style="width:64px;height:64px;border-radius:.375rem;">
-              <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.5rem"></i>
-            </div>
+  {% if not active_trip_bags %}
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle me-1"></i>No active bags on this trip.
+      <a href="/trips/{{ trip.id }}?tab=bags" class="alert-link">Assign bags</a> first.
+    </div>
+  {% else %}
+    <form method="post" action="/trips/{{ trip.id }}/checkin" enctype="multipart/form-data">
+      {% if available_flights %}
+        {% set outward = available_flights | selectattr('is_return', 'equalto', false) | list %}
+        {% set return_ = available_flights | selectattr('is_return', 'equalto', true) | list %}
+        <div class="card mb-4">
+          <div class="card-body">
+            <h6 class="mb-3"><i class="bi bi-airplane me-2 text-primary"></i>Flights covered by this check-in</h6>
+            {% if outward %}
+              <div class="mb-2">
+                <div class="small text-muted fw-semibold mb-1">Outward</div>
+                {% for f in outward %}
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      name="flight_ids"
+                      value="{{ f.id }}"
+                      id="flight_{{ f.id }}"
+                      {% if f.id in selected_flight_ids %}checked{% endif %}
+                    />
+                    <label class="form-check-label small" for="flight_{{ f.id }}">
+                      {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> —{% endif %}
+                      {{ f.departure_airport }}
+                      → {{ f.arrival_airport }}
+                      {% if f.departure_at %}
+                        <span class="text-muted">{{ f.departure_at.strftime('%d %b %H:%M') }}</span>
+                      {% endif %}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
             {% endif %}
-
-            <div class="flex-grow-1">
-              <h6 class="mb-2">{{ bag.name }}</h6>
-
-              <div class="d-flex gap-3 mb-3 flex-wrap">
-                <div class="form-check">
-                  <input class="form-check-input checkin-radio" type="radio"
-                         name="status_{{ bag.id }}" id="carry_{{ bag.id }}"
-                         value="carry_on" data-bag="{{ bag.id }}"
-                         {% if not bc or bc.status == 'carry_on' %}checked{% endif %}>
-                  <label class="form-check-label" for="carry_{{ bag.id }}">
-                    <i class="bi bi-person-walking me-1"></i>Carry On
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input class="form-check-input checkin-radio" type="radio"
-                         name="status_{{ bag.id }}" id="checked_{{ bag.id }}"
-                         value="checked_in" data-bag="{{ bag.id }}"
-                         {% if bc and bc.status == 'checked_in' %}checked{% endif %}>
-                  <label class="form-check-label" for="checked_{{ bag.id }}">
-                    <i class="bi bi-tag me-1"></i>Checked In
-                  </label>
-                </div>
-              </div>
-
-              <div id="details_{{ bag.id }}"
-                   class="border rounded p-3 bg-light{% if not is_checked %} d-none{% endif %}">
-                <div class="row g-2">
-                  <div class="col-sm-4">
-                    <label class="form-label small fw-semibold mb-1">
-                      Licence Plate Number
-                      <span class="text-muted fw-normal">(10-digit code on receipt)</span>
+            {% if return_ %}
+              <div>
+                <div class="small text-muted fw-semibold mb-1">Return</div>
+                {% for f in return_ %}
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      name="flight_ids"
+                      value="{{ f.id }}"
+                      id="flight_{{ f.id }}"
+                      {% if f.id in selected_flight_ids %}checked{% endif %}
+                    />
+                    <label class="form-check-label small" for="flight_{{ f.id }}">
+                      {% if f.flight_number %}<strong>{{ f.flight_number }}</strong> —{% endif %}
+                      {{ f.departure_airport }}
+                      → {{ f.arrival_airport }}
+                      {% if f.departure_at %}
+                        <span class="text-muted">{{ f.departure_at.strftime('%d %b %H:%M') }}</span>
+                      {% endif %}
                     </label>
-                    <input type="text" class="form-control form-control-sm font-monospace"
-                           name="licence_plate_{{ bag.id }}"
-                           maxlength="10" placeholder="e.g. ABC1234567"
-                           style="text-transform:uppercase;letter-spacing:.1em"
-                           value="{{ bc.licence_plate_number if bc else '' }}">
                   </div>
-                  <div class="col-sm-3">
-                    <label class="form-label small fw-semibold mb-1">
-                      Bag Weight <span class="text-muted fw-normal">(kg)</span>
-                    </label>
-                    <div class="input-group input-group-sm">
-                      <input type="number" class="form-control form-control-sm"
-                             name="weight_kg_{{ bag.id }}"
-                             min="0" max="99" step="0.1" placeholder="e.g. 23.5"
-                             value="{{ bc.weight_kg if bc else '' }}">
-                      <span class="input-group-text">kg</span>
-                    </div>
-                  </div>
-                  <div class="col-sm-5">
-                    <label class="form-label small fw-semibold mb-1">Baggage Receipt</label>
-                    {% if bc and bc.receipt_filename %}
-                    <div class="mb-1">
-                      <a href="/static/uploads/{{ bc.receipt_filename }}" target="_blank"
-                         class="btn btn-sm btn-outline-secondary py-0">
-                        <i class="bi bi-file-earmark me-1"></i>View current receipt
-                      </a>
-                    </div>
-                    {% endif %}
-                    <input type="file" class="form-control form-control-sm"
-                           name="receipt_{{ bag.id }}" accept="image/*,.pdf">
-                    <div class="form-text">Photo or PDF of baggage receipt (optional)</div>
-                  </div>
-                </div>
+                {% endfor %}
               </div>
-
-            </div>
+            {% endif %}
           </div>
         </div>
+      {% endif %}
+
+      <div class="row g-3 mb-4">
+        {% for tb in active_trip_bags %}
+          {% set bag = tb.bag %}
+          {% set bc = bag_checkin_by_bag.get(bag.id) %}
+          {% set is_checked = bc and bc.status == 'checked_in' %}
+
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex gap-3 align-items-start">
+                  {% if bag.primary_image %}
+                    <img
+                      src="/static/uploads/{{ bag.primary_image.filename }}"
+                      style="width:64px;height:64px;object-fit:cover;border-radius:.375rem;flex-shrink:0;"
+                      alt="{{ bag.name }}"
+                    />
+                  {% else %}
+                    <div
+                      class="d-flex align-items-center justify-content-center bg-light flex-shrink-0"
+                      style="width:64px;height:64px;border-radius:.375rem;"
+                    >
+                      <i class="bi bi-luggage text-secondary opacity-50" style="font-size:1.5rem"></i>
+                    </div>
+                  {% endif %}
+
+                  <div class="flex-grow-1">
+                    <h6 class="mb-2">{{ bag.name }}</h6>
+
+                    <div class="d-flex gap-3 mb-3 flex-wrap">
+                      <div class="form-check">
+                        <input
+                          class="form-check-input checkin-radio"
+                          type="radio"
+                          name="status_{{ bag.id }}"
+                          id="carry_{{ bag.id }}"
+                          value="carry_on"
+                          data-bag="{{ bag.id }}"
+                          {% if not bc or bc.status == 'carry_on' %}checked{% endif %}
+                        />
+                        <label class="form-check-label" for="carry_{{ bag.id }}">
+                          <i class="bi bi-person-walking me-1"></i>Carry On
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input checkin-radio"
+                          type="radio"
+                          name="status_{{ bag.id }}"
+                          id="checked_{{ bag.id }}"
+                          value="checked_in"
+                          data-bag="{{ bag.id }}"
+                          {% if bc and bc.status == 'checked_in' %}checked{% endif %}
+                        />
+                        <label class="form-check-label" for="checked_{{ bag.id }}">
+                          <i class="bi bi-tag me-1"></i>Checked In
+                        </label>
+                      </div>
+                    </div>
+
+                    <div
+                      id="details_{{ bag.id }}"
+                      class="border rounded p-3 bg-light{% if not is_checked %}d-none{% endif %}"
+                    >
+                      <div class="row g-2">
+                        <div class="col-sm-4">
+                          <label class="form-label small fw-semibold mb-1">
+                            Licence Plate Number
+                            <span class="text-muted fw-normal">(10-digit code on receipt)</span>
+                          </label>
+                          <input
+                            type="text"
+                            class="form-control form-control-sm font-monospace"
+                            name="licence_plate_{{ bag.id }}"
+                            maxlength="10"
+                            placeholder="e.g. ABC1234567"
+                            style="text-transform:uppercase;letter-spacing:.1em"
+                            value="{{ bc.licence_plate_number if bc else '' }}"
+                          />
+                        </div>
+                        <div class="col-sm-3">
+                          <label class="form-label small fw-semibold mb-1">
+                            Bag Weight <span class="text-muted fw-normal">(kg)</span>
+                          </label>
+                          <div class="input-group input-group-sm">
+                            <input
+                              type="number"
+                              class="form-control form-control-sm"
+                              name="weight_kg_{{ bag.id }}"
+                              min="0"
+                              max="99"
+                              step="0.1"
+                              placeholder="e.g. 23.5"
+                              value="{{ bc.weight_kg if bc else '' }}"
+                            />
+                            <span class="input-group-text">kg</span>
+                          </div>
+                        </div>
+                        <div class="col-sm-5">
+                          <label class="form-label small fw-semibold mb-1">Baggage Receipt</label>
+                          {% if bc and bc.receipt_filename %}
+                            <div class="mb-1">
+                              <a
+                                href="/static/uploads/{{ bc.receipt_filename }}"
+                                target="_blank"
+                                class="btn btn-sm btn-outline-secondary py-0"
+                              >
+                                <i class="bi bi-file-earmark me-1"></i>View current receipt
+                              </a>
+                            </div>
+                          {% endif %}
+                          <input
+                            type="file"
+                            class="form-control form-control-sm"
+                            name="receipt_{{ bag.id }}"
+                            accept="image/*,.pdf"
+                          />
+                          <div class="form-text">Photo or PDF of baggage receipt (optional)</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
       </div>
-    </div>
-    {% endfor %}
-  </div>
 
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary">
-      <i class="bi bi-check2 me-1"></i>Save Check-In
-    </button>
-    <a href="/trips/{{ trip.id }}?tab=bags" class="btn btn-outline-secondary">Cancel</a>
-  </div>
-
-</form>
-{% endif %}
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Save Check-In</button>
+        <a href="/trips/{{ trip.id }}?tab=bags" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script>
-  document.querySelectorAll('.checkin-radio').forEach(radio => {
-    radio.addEventListener('change', () => {
-      const details = document.getElementById('details_' + radio.dataset.bag);
-      if (details) details.classList.toggle('d-none', radio.value !== 'checked_in');
+  <script>
+    document.querySelectorAll(".checkin-radio").forEach((radio) => {
+      radio.addEventListener("change", () => {
+        const details = document.getElementById("details_" + radio.dataset.bag);
+        if (details) details.classList.toggle("d-none", radio.value !== "checked_in");
+      });
     });
-  });
-</script>
+  </script>
 {% endblock %}

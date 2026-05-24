@@ -1,311 +1,353 @@
 <!doctype html>
 <html lang="en" data-bs-theme="light">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bag Tag — bagtag.aero</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <style>
-    body { background-color: #f8f9fa; }
-    .iata-hero { font-size: 2.5rem; font-weight: 700; letter-spacing: 0.15em; font-family: monospace; }
-    .card { box-shadow: 0 1px 4px rgba(0,0,0,.08); border: 1px solid #e9ecef; }
-    .img-hero { width: 100%; max-height: 260px; object-fit: cover; border-radius: .5rem; }
-  </style>
-</head>
-<body>
-
-<nav class="navbar navbar-dark bg-dark">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="/">
-      bagtag<span style="color:#0dcaf0">.</span>aero
-    </a>
-    {% if is_owner %}
-    <div class="d-flex gap-2">
-      <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#qr-modal">
-        <i class="bi bi-qr-code me-1"></i>QR Code
-      </button>
-      <a href="/bags/{{ bag.id }}" class="btn btn-outline-light btn-sm">
-        <i class="bi bi-pencil me-1"></i>Edit
-      </a>
-    </div>
-    {% endif %}
-  </div>
-</nav>
-
-<div class="container py-4" style="max-width:640px">
-  {% set flash_success = request.query_params.get('success') %}
-  {% set flash_error = request.query_params.get('error') %}
-  {% if flash_success %}
-  <div class="alert alert-success alert-dismissible fade show">
-    <i class="bi bi-check-circle-fill me-2"></i>{{ flash_success | replace('+', ' ') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endif %}
-  {% if flash_error %}
-  <div class="alert alert-danger alert-dismissible fade show">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ flash_error | replace('+', ' ') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endif %}
-
-  <!-- Bag identification -->
-  <div class="card mb-4">
-    <div class="card-body text-center py-4">
-      {% if bag.primary_image %}
-      <img src="/static/uploads/{{ bag.primary_image.filename }}" class="img-hero mb-3" alt="Bag photo">
-      {% else %}
-      <div class="d-flex align-items-center justify-content-center mb-3 bg-light rounded" style="height:160px">
-        <i class="bi bi-luggage display-1 text-secondary opacity-50"></i>
-      </div>
-      {% endif %}
-
-      {% if bag.iata_code %}
-      <div class="iata-hero text-primary mb-1">{{ bag.iata_code }}</div>
-      <div class="text-muted small mb-3">IATA Baggage Identification Code</div>
-      <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-        {% if bag.color %}
-        <span class="badge bg-secondary">{{ LABEL_MAP.get(bag.color, bag.color) }}</span>
-        {% endif %}
-        {% if bag.bag_type %}
-        <span class="badge bg-secondary">{{ LABEL_MAP.get(bag.bag_type, bag.bag_type) }}</span>
-        {% endif %}
-        {% if bag.material %}
-        <span class="badge bg-secondary">{{ LABEL_MAP.get(bag.material, bag.material) }}</span>
-        {% else %}
-        {% if bag.bag_type %}
-        <span class="badge bg-secondary">Soft</span>
-        {% endif %}
-        {% endif %}
-        {% if bag.is_cabin_size %}<span class="badge bg-info text-dark">Cabin size</span>{% endif %}
-        {% if bag.has_combination_lock %}<span class="badge bg-light text-dark border">Combination lock</span>{% endif %}
-        {% if bag.has_retractable_handle %}<span class="badge bg-light text-dark border">Retractable handle</span>{% endif %}
-        {% if bag.has_closing_straps %}<span class="badge bg-light text-dark border">Closing straps</span>{% endif %}
-        {% if bag.has_wheels %}<span class="badge bg-light text-dark border">Wheels</span>{% endif %}
-      </div>
-      {% else %}
-      <p class="text-muted mb-0">This bag does not have an IATA identification code set.</p>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Relevant flights -->
-  {% if flights %}
-  <div class="card mb-4">
-    <div class="card-header bg-light fw-semibold small">
-      <i class="bi bi-airplane me-1"></i>Current / Recent Flights
-    </div>
-    <div class="card-body p-0">
-      <table class="table table-sm mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Flight</th>
-            <th>Route</th>
-            <th>Departure</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for flight in flights %}
-          <tr>
-            <td class="fw-semibold">{{ flight.flight_number or '—' }}</td>
-            <td>
-              <span class="font-monospace">{{ flight.departure_airport }}</span>
-              <i class="bi bi-arrow-right mx-1 text-muted"></i>
-              <span class="font-monospace">{{ flight.arrival_airport }}</span>
-            </td>
-            <td class="text-muted small">
-              {% if flight.departure_at %}
-              {{ flight.departure_at.strftime('%d %b %H:%M') }}
-              {% else %}—{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Leave an update -->
-  <div class="card mb-4">
-    <div class="card-header bg-light fw-semibold small">
-      <i class="bi bi-chat-left-text me-1"></i>Leave an Update
-    </div>
-    <div class="card-body">
-      {% if is_owner %}
-      <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
-        <i class="bi bi-patch-check-fill"></i>
-        <span>You are posting as <strong>Verified Owner</strong>.</span>
-      </div>
-      {% else %}
-      <p class="text-muted small mb-3">
-        Found this bag? Let the owner know where it is by leaving an update below.
-        Your location can be shared automatically if you allow it.
-      </p>
-      {% endif %}
-      <form method="post" action="/b/{{ bag.public_token }}/updates" id="update-form">
-        <input type="hidden" name="latitude" id="lat-input">
-        <input type="hidden" name="longitude" id="lng-input">
-
-        {% if not is_owner %}
-        <div class="mb-3">
-          <label class="form-label fw-semibold" for="finder_name">Your name <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" id="finder_name" name="finder_name"
-                 placeholder="e.g. Jane Smith" maxlength="200" required>
-        </div>
-        {% endif %}
-
-        <div class="mb-3">
-          <label class="form-label fw-semibold" for="comment">Message <span class="text-danger">*</span></label>
-          <textarea class="form-control" id="comment" name="comment" rows="3"
-                    placeholder="e.g. Found at baggage carousel 4 at Heathrow Terminal 5."
-                    maxlength="2000" required></textarea>
-        </div>
-
-        <div class="mb-3">
-          <div id="location-status" class="text-muted small d-flex align-items-center gap-2">
-            <i class="bi bi-geo-alt"></i>
-            <span id="location-text">Location not shared</span>
-            <button type="button" class="btn btn-outline-secondary btn-sm py-0" id="share-location-btn">
-              Share my location
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bag Tag — bagtag.aero</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+      body {
+        background-color: #f8f9fa;
+      }
+      .iata-hero {
+        font-size: 2.5rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        font-family: monospace;
+      }
+      .card {
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e9ecef;
+      }
+      .img-hero {
+        width: 100%;
+        max-height: 260px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand fw-bold" href="/"> bagtag<span style="color:#0dcaf0">.</span>aero </a>
+        {% if is_owner %}
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#qr-modal">
+              <i class="bi bi-qr-code me-1"></i>QR Code
             </button>
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100">
-          <i class="bi bi-send me-1"></i>Submit Update
-        </button>
-      </form>
-    </div>
-  </div>
-
-  {% if bag.updates %}
-  <div class="card mb-4">
-    <div class="card-header bg-light fw-semibold small">
-      <i class="bi bi-clock-history me-1"></i>Previous Updates
-    </div>
-    <ul class="list-group list-group-flush">
-      {% for upd in bag.updates %}
-      <li class="list-group-item">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div class="fw-semibold d-flex align-items-center gap-2">
-              {{ upd.finder_name }}
-              {% if upd.finder_name == "Verified Owner" %}
-              <span class="badge bg-success" style="font-size:.65rem">
-                <i class="bi bi-patch-check-fill me-1"></i>Verified Owner
-              </span>
-              {% endif %}
-            </div>
-            <div class="small">{{ upd.comment }}</div>
-            {% if upd.latitude is not none and upd.longitude is not none %}
-            <a href="https://www.openstreetmap.org/?mlat={{ upd.latitude }}&mlon={{ upd.longitude }}&zoom=14"
-               class="small text-muted" target="_blank" rel="noopener">
-              <i class="bi bi-geo-alt-fill me-1"></i>View location
+            <a href="/bags/{{ bag.id }}" class="btn btn-outline-light btn-sm">
+              <i class="bi bi-pencil me-1"></i>Edit
             </a>
-            {% endif %}
           </div>
-          <span class="text-muted small ms-3 text-nowrap">{{ upd.created_at.strftime('%d %b %H:%M') }}</span>
+        {% endif %}
+      </div>
+    </nav>
+
+    <div class="container py-4" style="max-width:640px">
+      {% set flash_success = request.query_params.get('success') %}
+      {% set flash_error = request.query_params.get('error') %}
+      {% if flash_success %}
+        <div class="alert alert-success alert-dismissible fade show">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ flash_success | replace('+', ' ') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
+      {% endif %}
+      {% if flash_error %}
+        <div class="alert alert-danger alert-dismissible fade show">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ flash_error | replace('+', ' ') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endif %}
 
-  <p class="text-center text-muted small">
-    <a href="/" class="text-muted"><i class="bi bi-luggage me-1"></i>bagtag.aero</a>
-  </p>
-</div>
+      <!-- Bag identification -->
+      <div class="card mb-4">
+        <div class="card-body text-center py-4">
+          {% if bag.primary_image %}
+            <img src="/static/uploads/{{ bag.primary_image.filename }}" class="img-hero mb-3" alt="Bag photo" />
+          {% else %}
+            <div class="d-flex align-items-center justify-content-center mb-3 bg-light rounded" style="height:160px">
+              <i class="bi bi-luggage display-1 text-secondary opacity-50"></i>
+            </div>
+          {% endif %}
 
-{% if is_owner %}
-<div class="modal fade" id="qr-modal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-qr-code me-2"></i>Bag QR Code</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          {% if bag.iata_code %}
+            <div class="iata-hero text-primary mb-1">{{ bag.iata_code }}</div>
+            <div class="text-muted small mb-3">IATA Baggage Identification Code</div>
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
+              {% if bag.color %}
+                <span class="badge bg-secondary">{{ LABEL_MAP.get(bag.color, bag.color) }}</span>
+              {% endif %}
+              {% if bag.bag_type %}
+                <span class="badge bg-secondary">{{ LABEL_MAP.get(bag.bag_type, bag.bag_type) }}</span>
+              {% endif %}
+              {% if bag.material %}
+                <span class="badge bg-secondary">{{ LABEL_MAP.get(bag.material, bag.material) }}</span>
+              {% else %}
+                {% if bag.bag_type %}
+                  <span class="badge bg-secondary">Soft</span>
+                {% endif %}
+              {% endif %}
+              {% if bag.is_cabin_size %}<span class="badge bg-info text-dark">Cabin size</span>{% endif %}
+              {% if bag.has_combination_lock %}
+                <span class="badge bg-light text-dark border">Combination lock</span>
+              {% endif %}
+              {% if bag.has_retractable_handle %}
+                <span class="badge bg-light text-dark border">Retractable handle</span>
+              {% endif %}
+              {% if bag.has_closing_straps %}
+                <span class="badge bg-light text-dark border">Closing straps</span>
+              {% endif %}
+              {% if bag.has_wheels %}<span class="badge bg-light text-dark border">Wheels</span>{% endif %}
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">This bag does not have an IATA identification code set.</p>
+          {% endif %}
+        </div>
       </div>
-      <div class="modal-body text-center py-4">
-        <div id="qr-canvas" class="d-inline-block mb-3"></div>
-        <p class="text-muted small mb-1">Scan to view this bag's public tracking page</p>
-        <p class="font-monospace small text-muted" id="qr-url"></p>
-        <a id="qr-download" class="btn btn-sm btn-outline-secondary mt-2" download="bagtag-{{ bag.id }}.png">
-          <i class="bi bi-download me-1"></i>Download PNG
-        </a>
+
+      <!-- Relevant flights -->
+      {% if flights %}
+        <div class="card mb-4">
+          <div class="card-header bg-light fw-semibold small">
+            <i class="bi bi-airplane me-1"></i>Current / Recent Flights
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Flight</th>
+                  <th>Route</th>
+                  <th>Departure</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for flight in flights %}
+                  <tr>
+                    <td class="fw-semibold">{{ flight.flight_number or '—' }}</td>
+                    <td>
+                      <span class="font-monospace">{{ flight.departure_airport }}</span>
+                      <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                      <span class="font-monospace">{{ flight.arrival_airport }}</span>
+                    </td>
+                    <td class="text-muted small">
+                      {% if flight.departure_at %}
+                        {{ flight.departure_at.strftime('%d %b %H:%M') }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Leave an update -->
+      <div class="card mb-4">
+        <div class="card-header bg-light fw-semibold small">
+          <i class="bi bi-chat-left-text me-1"></i>Leave an Update
+        </div>
+        <div class="card-body">
+          {% if is_owner %}
+            <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
+              <i class="bi bi-patch-check-fill"></i>
+              <span>You are posting as <strong>Verified Owner</strong>.</span>
+            </div>
+          {% else %}
+            <p class="text-muted small mb-3">
+              Found this bag? Let the owner know where it is by leaving an update below. Your location can be shared
+              automatically if you allow it.
+            </p>
+          {% endif %}
+          <form method="post" action="/b/{{ bag.public_token }}/updates" id="update-form">
+            <input type="hidden" name="latitude" id="lat-input" />
+            <input type="hidden" name="longitude" id="lng-input" />
+
+            {% if not is_owner %}
+              <div class="mb-3">
+                <label class="form-label fw-semibold" for="finder_name"
+                  >Your name <span class="text-danger">*</span></label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="finder_name"
+                  name="finder_name"
+                  placeholder="e.g. Jane Smith"
+                  maxlength="200"
+                  required
+                />
+              </div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="comment">Message <span class="text-danger">*</span></label>
+              <textarea
+                class="form-control"
+                id="comment"
+                name="comment"
+                rows="3"
+                placeholder="e.g. Found at baggage carousel 4 at Heathrow Terminal 5."
+                maxlength="2000"
+                required
+              ></textarea>
+            </div>
+
+            <div class="mb-3">
+              <div id="location-status" class="text-muted small d-flex align-items-center gap-2">
+                <i class="bi bi-geo-alt"></i>
+                <span id="location-text">Location not shared</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0" id="share-location-btn">
+                  Share my location
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Submit Update</button>
+          </form>
+        </div>
       </div>
-      <div class="modal-footer justify-content-between">
-        <div class="text-muted small">Regenerate if this link is receiving spam.</div>
-        <form method="post" action="/bags/{{ bag.id }}/regenerate-token">
-          <button type="submit" class="btn btn-sm btn-outline-danger"
-                  data-confirm="Regenerate the public link? The old link will stop working immediately.">
-            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate link
-          </button>
-        </form>
-      </div>
+
+      {% if bag.updates %}
+        <div class="card mb-4">
+          <div class="card-header bg-light fw-semibold small">
+            <i class="bi bi-clock-history me-1"></i>Previous Updates
+          </div>
+          <ul class="list-group list-group-flush">
+            {% for upd in bag.updates %}
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div class="fw-semibold d-flex align-items-center gap-2">
+                      {{ upd.finder_name }}
+                      {% if upd.finder_name == "Verified Owner" %}
+                        <span class="badge bg-success" style="font-size:.65rem">
+                          <i class="bi bi-patch-check-fill me-1"></i>Verified Owner
+                        </span>
+                      {% endif %}
+                    </div>
+                    <div class="small">{{ upd.comment }}</div>
+                    {% if upd.latitude is not none and upd.longitude is not none %}
+                      <a
+                        href="https://www.openstreetmap.org/?mlat={{ upd.latitude }}&mlon={{ upd.longitude }}&zoom=14"
+                        class="small text-muted"
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        <i class="bi bi-geo-alt-fill me-1"></i>View location
+                      </a>
+                    {% endif %}
+                  </div>
+                  <span class="text-muted small ms-3 text-nowrap">{{ upd.created_at.strftime('%d %b %H:%M') }}</span>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <p class="text-center text-muted small">
+        <a href="/" class="text-muted"><i class="bi bi-luggage me-1"></i>bagtag.aero</a>
+      </p>
     </div>
-  </div>
-</div>
-{% endif %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-{% if is_owner %}
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script>
-  document.querySelectorAll('[data-confirm]').forEach(btn => {
-    btn.addEventListener('click', e => { if (!confirm(btn.dataset.confirm)) e.preventDefault(); });
-  });
+    {% if is_owner %}
+      <div class="modal fade" id="qr-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="bi bi-qr-code me-2"></i>Bag QR Code</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+              <div id="qr-canvas" class="d-inline-block mb-3"></div>
+              <p class="text-muted small mb-1">Scan to view this bag's public tracking page</p>
+              <p class="font-monospace small text-muted" id="qr-url"></p>
+              <a id="qr-download" class="btn btn-sm btn-outline-secondary mt-2" download="bagtag-{{ bag.id }}.png">
+                <i class="bi bi-download me-1"></i>Download PNG
+              </a>
+            </div>
+            <div class="modal-footer justify-content-between">
+              <div class="text-muted small">Regenerate if this link is receiving spam.</div>
+              <form method="post" action="/bags/{{ bag.id }}/regenerate-token">
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-outline-danger"
+                  data-confirm="Regenerate the public link? The old link will stop working immediately."
+                >
+                  <i class="bi bi-arrow-clockwise me-1"></i>Regenerate link
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
 
-  document.getElementById('qr-modal').addEventListener('show.bs.modal', function () {
-    const container = document.getElementById('qr-canvas');
-    if (container.querySelector('canvas')) return;
-    const url = window.location.origin + window.location.pathname;
-    document.getElementById('qr-url').textContent = url;
-    new QRCode(container, {
-      text: url,
-      width: 220,
-      height: 220,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M,
-    });
-    setTimeout(() => {
-      const canvas = container.querySelector('canvas');
-      if (canvas) document.getElementById('qr-download').href = canvas.toDataURL('image/png');
-    }, 100);
-  });
-</script>
-{% endif %}
-<script>
-  const shareBtn = document.getElementById('share-location-btn');
-  const locationText = document.getElementById('location-text');
-  const latInput = document.getElementById('lat-input');
-  const lngInput = document.getElementById('lng-input');
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% if is_owner %}
+      <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+      <script>
+        document.querySelectorAll("[data-confirm]").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            if (!confirm(btn.dataset.confirm)) e.preventDefault();
+          });
+        });
 
-  if (!navigator.geolocation) {
-    shareBtn.style.display = 'none';
-    locationText.textContent = 'Geolocation not available in this browser';
-  }
+        document.getElementById("qr-modal").addEventListener("show.bs.modal", function () {
+          const container = document.getElementById("qr-canvas");
+          if (container.querySelector("canvas")) return;
+          const url = window.location.origin + window.location.pathname;
+          document.getElementById("qr-url").textContent = url;
+          new QRCode(container, {
+            text: url,
+            width: 220,
+            height: 220,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+          setTimeout(() => {
+            const canvas = container.querySelector("canvas");
+            if (canvas) document.getElementById("qr-download").href = canvas.toDataURL("image/png");
+          }, 100);
+        });
+      </script>
+    {% endif %}
+    <script>
+      const shareBtn = document.getElementById("share-location-btn");
+      const locationText = document.getElementById("location-text");
+      const latInput = document.getElementById("lat-input");
+      const lngInput = document.getElementById("lng-input");
 
-  shareBtn.addEventListener('click', () => {
-    shareBtn.disabled = true;
-    shareBtn.textContent = 'Getting location…';
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        latInput.value = pos.coords.latitude;
-        lngInput.value = pos.coords.longitude;
-        locationText.textContent = `Location captured (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`;
-        shareBtn.style.display = 'none';
-        document.getElementById('location-status').classList.remove('text-muted');
-        document.getElementById('location-status').classList.add('text-success');
-      },
-      err => {
-        locationText.textContent = 'Could not get location — continuing without it';
-        shareBtn.style.display = 'none';
-      },
-      { timeout: 10000 }
-    );
-  });
-</script>
-</body>
+      if (!navigator.geolocation) {
+        shareBtn.style.display = "none";
+        locationText.textContent = "Geolocation not available in this browser";
+      }
+
+      shareBtn.addEventListener("click", () => {
+        shareBtn.disabled = true;
+        shareBtn.textContent = "Getting location…";
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            latInput.value = pos.coords.latitude;
+            lngInput.value = pos.coords.longitude;
+            locationText.textContent = `Location captured (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`;
+            shareBtn.style.display = "none";
+            document.getElementById("location-status").classList.remove("text-muted");
+            document.getElementById("location-status").classList.add("text-success");
+          },
+          (err) => {
+            locationText.textContent = "Could not get location — continuing without it";
+            shareBtn.style.display = "none";
+          },
+          { timeout: 10000 },
+        );
+      });
+    </script>
+  </body>
 </html>

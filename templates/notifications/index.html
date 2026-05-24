@@ -2,47 +2,53 @@
 {% block title %}Notifications — bagtag.aero{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center mb-4 gap-3">
-  <div class="flex-grow-1">
-    <h1 class="h3 mb-0"><i class="bi bi-bell me-2"></i>Notifications</h1>
+  <div class="d-flex align-items-center mb-4 gap-3">
+    <div class="flex-grow-1">
+      <h1 class="h3 mb-0"><i class="bi bi-bell me-2"></i>Notifications</h1>
+    </div>
   </div>
-</div>
 
-{% if notifications %}
-<div class="card">
-  <ul class="list-group list-group-flush">
-    {% for notif in notifications %}
-    <li class="list-group-item {% if not notif.is_read %}bg-light{% endif %}">
-      <div class="d-flex align-items-start gap-3">
-        <div class="flex-shrink-0 mt-1">
-          <i class="bi bi-geo-alt-fill text-primary"></i>
-        </div>
-        <div class="flex-grow-1">
-          <div class="small">{{ notif.message }}</div>
-          {% if notif.bag_update and notif.bag_update.latitude is not none and notif.bag_update.longitude is not none %}
-          <a href="https://www.openstreetmap.org/?mlat={{ notif.bag_update.latitude }}&mlon={{ notif.bag_update.longitude }}&zoom=14"
-             class="small text-primary" target="_blank" rel="noopener">
-            <i class="bi bi-map me-1"></i>View on map
-          </a>
-          {% endif %}
-          {% if notif.bag_update %}
-          <a href="/b/{{ notif.bag_update.bag_id }}" class="small text-muted ms-3">
-            <i class="bi bi-box-arrow-up-right me-1"></i>View public page
-          </a>
-          {% endif %}
-        </div>
-        <div class="flex-shrink-0 text-muted small text-nowrap">
-          {{ notif.created_at.strftime('%d %b %H:%M') }}
-        </div>
-      </div>
-    </li>
-    {% endfor %}
-  </ul>
-</div>
-{% else %}
-<div class="text-center py-5 text-muted">
-  <i class="bi bi-bell-slash display-4 opacity-50"></i>
-  <p class="mt-3">No notifications yet.<br>You'll be notified here when someone scans your bag's QR code and leaves an update.</p>
-</div>
-{% endif %}
+  {% if notifications %}
+    <div class="card">
+      <ul class="list-group list-group-flush">
+        {% for notif in notifications %}
+          <li class="list-group-item {% if not notif.is_read %}bg-light{% endif %}">
+            <div class="d-flex align-items-start gap-3">
+              <div class="flex-shrink-0 mt-1">
+                <i class="bi bi-geo-alt-fill text-primary"></i>
+              </div>
+              <div class="flex-grow-1">
+                <div class="small">{{ notif.message }}</div>
+                {% if notif.bag_update and notif.bag_update.latitude is not none and notif.bag_update.longitude is not none %}
+                  <a
+                    href="https://www.openstreetmap.org/?mlat={{ notif.bag_update.latitude }}&mlon={{ notif.bag_update.longitude }}&zoom=14"
+                    class="small text-primary"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <i class="bi bi-map me-1"></i>View on map
+                  </a>
+                {% endif %}
+                {% if notif.bag_update %}
+                  <a href="/b/{{ notif.bag_update.bag_id }}" class="small text-muted ms-3">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>View public page
+                  </a>
+                {% endif %}
+              </div>
+              <div class="flex-shrink-0 text-muted small text-nowrap">
+                {{ notif.created_at.strftime('%d %b %H:%M') }}
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-bell-slash display-4 opacity-50"></i>
+      <p class="mt-3">
+        No notifications yet.<br />You'll be notified here when someone scans your bag's QR code and leaves an update.
+      </p>
+    </div>
+  {% endif %}
 {% endblock %}
